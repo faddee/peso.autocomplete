@@ -27,7 +27,7 @@ $peso-autocomplete-color: white !default;
 	padding: .5rem;
 	border-top: 1px solid darken($peso-autocomplete-color, 10%);
 	background: $peso-autocomplete-color;
-	&:focus, &:active {
+	&:hover, &:focus, &:active {
 		color: inherit;
 		outline: none;
 		background: darken($peso-autocomplete-color, 15%);

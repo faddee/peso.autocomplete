@@ -25,7 +25,7 @@
   background: white;
 }
 /* line 30, ../scss/_peso.autocomplete.mixins.scss */
-.autocomplete__link:focus, .autocomplete__link:active {
+.autocomplete__link:hover, .autocomplete__link:focus, .autocomplete__link:active {
   color: inherit;
   outline: none;
   background: #d9d9d9;
