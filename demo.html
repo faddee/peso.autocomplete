@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<meta charset='utf-8'>
+	<title></title>
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundation/4.3.2/css/normalize.min.css">
+	<link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/foundation/4.3.2/css/foundation.min.css">
+	<link rel="stylesheet" href="css/peso.autocomplete.css">
+	<link rel="stylesheet" href="css/demo.css">
+	<script type="text/javascript">
+		document.write(
+			'<script type="text/javascript" src="' +
+			('__proto__' in {} ? '//cdnjs.cloudflare.com/ajax/libs/zepto/1.0/zepto.min.js' : '//cdnjs.cloudflare.com/ajax/libs/jquery/2.0.3/jquery.min.js') + 
+			'"><\/script>'
+		 );
+	</script>
+	<script type="text/javascript" src="peso.autocomplete.js"></script>
+	<script type="text/javascript">
+		$(function() {
+			$('.input-1').autocomplete({
+				url: 'demo.json'
+			});
+			$('.input-2').autocomplete({
+				source: [
+					"fo",
+					"foo",
+					"fooo",
+					"ba",
+					"bar",
+					"foobar"
+				]
+			});
+		});
+	</script>
+
+</head>
+<body>
+	
+	<div class="row">
+		<div class="small-12 large-6 columns"><input type="text" class="input-1"></div>
+		<div class="small-12 large-6 columns"><input type="text" class="input-2"></div>
+	</div>
+
+</body>
+</html>

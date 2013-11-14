@@ -1,0 +1,23 @@
+{
+  "name": "peso.autocomplete",
+  "version": "0.1.0",
+  "description": "peso.autocomplete\r =================",
+  "main": "peso.autocomplete.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/faddee/peso-autocomplete.git"
+  },
+  "author": "Fredrik Nicol (fredrik.nicol@gmail.com)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/faddee/peso-autocomplete/issues"
+  },
+  "homepage": "https://github.com/faddee/peso-autocomplete",
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-contrib-uglify": "~0.2.7",
+    "grunt-contrib-watch": "~0.5.3",
+    "grunt-contrib-connect": "~0.5.0",
+    "grunt-contrib-compass": "~0.6.0"
+  }
+}

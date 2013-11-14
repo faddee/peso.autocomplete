@@ -1,0 +1,10 @@
+/* line 3, ../scss/demo.scss */
+body {
+  padding: 20px 0;
+  background: #333;
+}
+
+/* line 8, ../scss/demo.scss */
+a:link, a:visited, a:hover, a:active {
+  color: #333;
+}

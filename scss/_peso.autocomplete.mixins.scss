@@ -1,0 +1,35 @@
+@charset "utf-8";
+
+$peso-autocomplete-color: white !default;
+
+@mixin peso-autocompelete__wrapper {
+	position: relative;
+}
+
+@mixin peso-autocompelte__input {
+
+}
+
+@mixin peso-autocomplete__results {
+	position: absolute;
+	left: 0;
+	top: 100%;
+	width: 100%;
+}
+
+@mixin peso-autocomplete__item {
+	display: block;
+}
+
+@mixin peso-autocomplete__link {
+	display: block;
+	padding: 8px;
+	padding: .5rem;
+	border-top: 1px solid darken($peso-autocomplete-color, 10%);
+	background: $peso-autocomplete-color;
+	&:focus, &:active {
+		color: inherit;
+		outline: none;
+		background: darken($peso-autocomplete-color, 15%);
+	}
+}
