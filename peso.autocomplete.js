@@ -75,6 +75,8 @@
 			return $.type(key) === 'number' && key > 0 && ( key === keyMap.enter || key === keyMap.esc || key === keyMap.up || key === keyMap.down );
 		},
 
+		openAutocompletes = [],
+
 		// Definition of the contructor
 		Autocomplete = function(options) {
 
@@ -317,10 +319,7 @@
 				// Show the results when it's ready
 				$results.show();
 
-				// Attach a click event handler to close the autocomplete when the user clicks outside it
-				$(document).one('click.' + pluginName, function() {
-					self.close();
-				});
+				openAutocompletes.push(this);
 
 				return self;
 			},
@@ -328,15 +327,16 @@
 			close: function() {
 				var self = this,
 					$results = self.$results,
-					$input = self.$input;
+					indexOf = $.inArray(self, openAutocompletes);
 
 				// Empty and hide the results
 				$results
 					.hide()
 					.empty();
 
-				// Kill the click event handler for closing the autocomplete when the user clicks outside it
-				$(document).off('click.' + pluginName);
+				if ( indexOf > -1 ) {
+					openAutocompletes.splice(indexOf, 1);
+				}
 
 				return self;
 			},
@@ -460,5 +460,15 @@
 				}
 			});
 		};
+
+		// Attach a click event handler to close the autocomplete when the user clicks outside it
+		$(document).on('click.' + pluginName, function() {
+			var autocompletes = $.extend([], openAutocompletes);
+			$.each(autocompletes, function() {
+				if ( isVisible(this.$results) ) {
+					this.close();
+				}
+			});
+		});
 
 }).call(this);
