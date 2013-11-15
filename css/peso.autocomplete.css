@@ -1,9 +1,7 @@
-/* line 7, ../scss/peso.autocomplete.scss */
 .autocomplete {
   position: relative;
 }
 
-/* line 13, ../scss/peso.autocomplete.scss */
 .autocomplete__results {
   position: absolute;
   left: 0;
@@ -11,12 +9,10 @@
   width: 100%;
 }
 
-/* line 16, ../scss/peso.autocomplete.scss */
 .autocomplete__item {
   display: block;
 }
 
-/* line 19, ../scss/peso.autocomplete.scss */
 .autocomplete__link {
   display: block;
   padding: 8px;
@@ -24,7 +20,6 @@
   border-top: 1px solid #e6e6e6;
   background: white;
 }
-/* line 30, ../scss/_peso.autocomplete.mixins.scss */
 .autocomplete__link:hover, .autocomplete__link:focus, .autocomplete__link:active {
   color: inherit;
   outline: none;
