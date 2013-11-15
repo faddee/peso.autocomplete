@@ -1,0 +1,20 @@
+{
+  "name": "peso.autocomplete",
+  "main": "peso.autocomplete.js",
+  "version": "0.1.0",
+  "homepage": "https://github.com/faddee/peso.autocomplete",
+  "authors": [
+    "Fredrik Nicol <fredrik.nicol@capgemini.com>"
+  ],
+  "keywords": [
+    "autocomplete",
+    "zepto",
+    "jquery"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components"
+  ]
+}
