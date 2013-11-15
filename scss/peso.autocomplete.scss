@@ -5,17 +5,5 @@
   "peso.autocomplete.mixins";
 
 .autocomplete {
-  @include peso-autocompelete__wrapper;
-}
-.autocompelte__input {
-  @include peso-autocompelte__input;
-}
-.autocomplete__results {
-  @include peso-autocomplete__results;
-}
-.autocomplete__item {
-  @include peso-autocomplete__item;
-}
-.autocomplete__link {
-  @include peso-autocomplete__link;
+  @include peso-autocompelete;
 }

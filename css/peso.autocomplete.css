@@ -1,26 +1,23 @@
 .autocomplete {
   position: relative;
 }
-
-.autocomplete__results {
+.autocomplete .autocomplete__results {
   position: absolute;
   left: 0;
   top: 100%;
   width: 100%;
 }
-
-.autocomplete__item {
+.autocomplete .autocomplete__item {
   display: block;
 }
-
-.autocomplete__link {
+.autocomplete .autocomplete__link {
   display: block;
   padding: 8px;
   padding: .5rem;
   border-top: 1px solid #e6e6e6;
   background: white;
 }
-.autocomplete__link:hover, .autocomplete__link:focus, .autocomplete__link:active {
+.autocomplete .autocomplete__link:hover, .autocomplete .autocomplete__link:focus, .autocomplete .autocomplete__link:active {
   color: inherit;
   outline: none;
   background: #d9d9d9;

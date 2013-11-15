@@ -1,6 +1,27 @@
 @charset "utf-8";
 
-$peso-autocomplete-color: white !default;
+$peso-autocomplete-class-prefix:  autocomplete !default;
+$peso-autocomplete-class-input:   __input !default;
+$peso-autocomplete-class-results: __results !default;
+$peso-autocomplete-class-item:    __item !default;
+$peso-autocomplete-class-link:    __link !default;
+$peso-autocomplete-color:         white !default;
+
+@mixin peso-autocompelete {
+  @include peso-autocompelete__wrapper;
+  .#{$peso-autocomplete-class-prefix}#{$peso-autocomplete-class-input} {
+    @include peso-autocompelte__input;
+  }
+  .#{$peso-autocomplete-class-prefix}#{$peso-autocomplete-class-results} {
+    @include peso-autocomplete__results;
+  }
+  .#{$peso-autocomplete-class-prefix}#{$peso-autocomplete-class-item} {
+    @include peso-autocomplete__item;
+  }
+  .#{$peso-autocomplete-class-prefix}#{$peso-autocomplete-class-link} {
+    @include peso-autocomplete__link;
+  }
+}
 
 @mixin peso-autocompelete__wrapper {
   position: relative;
