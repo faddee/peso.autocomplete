@@ -1,8 +1,6 @@
 @charset "utf-8";
 
-@import
-  "compass",
-  "peso.autocomplete.mixins";
+@import "peso.autocomplete.mixins";
 
 .autocomplete {
   @include peso-autocompelete;
