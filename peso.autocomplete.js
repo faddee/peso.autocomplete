@@ -20,12 +20,23 @@
 
     // Default options
     defaults = {
-
-      url:              undefined,    // Ajax request URL
-      type:             undefined,    // Ajax HTTP request method
-      source:           [],           // If you rather would like to use a source, the plugin takes it from there and filter it for you
+      // Core options
+      source:           [],           // If it's a string, it will use it as the 'url' for an ajax request. If it's an array the plugin will filter it for you.
+      ajax:             {},           // Ajax settings, all of the options, except 'url', will be used: http://zeptojs.com/#$.ajax
+      fieldName:        'q',          // Name of the query string field that will be used when 'source' is a URL. If other source type, this will be ignored.
       minLength:        2,            // Minimum number of characters before the autocomplete triggers
       maxResults:       10,           // Maximum number of results to show, 0 = unlimited
+
+      // Events
+      change:           null,
+      close:            null,
+      create:           null,
+      focus:            null,
+      response:         null,
+      search:           null,
+      select:           null,
+
+      // Markup
       wrap:             true,         // Automatically wrap the input element, set to false you need to wrap it manually with CSS: position: relative;
       classPrefix:      pluginName,   // Class name prefix
       classWrapper:     '',           // The class name of the wrapper for the input element
@@ -39,18 +50,10 @@
     defaultMarkup = function(settings) {
 
       return {
-
-        // Wrapper markup
-        markupWrapper: '<div class="' + settings.classPrefix + settings.classWrapper + '">',
-
-        // Result container markup
-        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">',
-
-        // Result item markup
-        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">',
-
-        // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo
-        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '">'
+        markupWrapper: '<div class="' + settings.classPrefix + settings.classWrapper + '">',      // Wrapper markup
+        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">', // Result container markup
+        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">', // Result item markup
+        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '">'   // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
       };
     },
 
@@ -76,6 +79,11 @@
       return $.type(key) === 'number' && key > 0 && ( key === keyMap.enter || key === keyMap.esc || key === keyMap.up || key === keyMap.down );
     },
 
+    // Don't bubble events when using the autocompletion
+    stopPropagation = function(event) {
+      event.stopPropagation();
+    },
+
     openAutocompletes = [],
 
     // Definition of the contructor
@@ -93,20 +101,17 @@
       build: function(element) {
         var self = this,
           settings = self.settings,
+          create = settings.create,
           suggestions = self.suggestions = null,
 
           // Store the element for further use
+          input = self.input = element,
           $input = self.$input = $(element),
 
           // Create the result list object and store it
           $results = self.$results = $(settings.markupResultList),
 
-          $wrapper = self.$wrapper,
-
-          // Don't bubble events when using the autocompletion
-          stopPropagation = function(event) {
-            event.stopPropagation();
-          };
+          $wrapper = self.$wrapper;
 
         // Add class to the input element
         if ( $.type(settings.classInput) === 'string' ) {
@@ -126,23 +131,20 @@
           $input.add($results).on('click.' + pluginName, stopPropagation);
         }
 
-        // Determine whether the suggestions should be fetched from from the source parameter
-        if ( !settings.url && $.isArray(settings.source) ) {
-          self.open = function() {
-            this.fetch('source');
-            return this;
-          };
+        // Determine the source method
+        if ( $.isArray(settings.source) ) {
+          self.method = 'array';
 
         // ...or if it should be fetched with an ajax request
-        } else if ( $.type(settings.url) === 'string' ) {
-          self.open = function() {
-            this.fetch('ajax');
-            return this;
-          };
+        } else if ( $.type(settings.source) === 'string' ) {
+          self.method = 'ajax';
         }
 
         // Listen and handling events on the input element
         $input
+
+          // Save the currect value
+          .data('current-value', $input.val())
 
           // Adds a custom event handler to the input element so you can controll it
           // 
@@ -166,22 +168,31 @@
 
           // Focus and keyup event handlers
           .on('focus keyup', function(event) {
-            var length = $input.val().length,
-              key = event.type === 'keyup' && ( event.keyCode || event.which );
+            var query = $input.val(),
+              length = query.length,
+              keyCode = event.type === 'keyup' && ( event.keyCode || event.which ),
+              keyEvent = isKeyEvent(keyCode),
+              change = settings.change;
+
+            // Call the user change callback
+            if ( !keyEvent && $.isFunction(change) && query !== $input.data('current-value') ) {
+              $input.data('current-value', query);
+              change.call( self.input );
+            }
 
             // Check if the keyup is dedicated to controll the autocomplete
-            if ( isKeyEvent(key) ) {
-              self.keyEvent(key, event.target);
+            if ( keyEvent ) {
+              self.keyEvent(keyCode, event.target);
 
             // Check if the query string meets the requirements of the minLength parameter
             } else if ( self.isMinLength(length) ) {
-              // TODO: Add delay
               self.open();
 
             // If not and the result list is visible, close it
             } else if ( isVisible($results) ) {
               self.close();
             }
+
           });
 
         $results
@@ -191,6 +202,14 @@
 
           // Add results to the DOM
           .insertAfter($input)
+
+          // Call the user focus callback
+          .on('focus.' + pluginName, 'a', function() {
+            var focus = settings.focus;
+            if ( $.isFunction(focus) ) {
+              focus.call( input, this );
+            }
+          })
 
           // Attach keyup event handler on <a> tags
           .on('keyup.' + pluginName, 'a', function(event) {
@@ -202,7 +221,13 @@
 
           // Attach click event handler
           .on('click.' + pluginName, 'a', function(event) {
+            var select = settings.select;
             event.preventDefault();
+
+            // Call the user create callback
+            if ( $.isFunction(select) ) {
+              select.call( input, this);
+            }
 
             // Set the value to the input element
             // TODO: Test without data-attribute
@@ -212,15 +237,41 @@
             self.close();
           });
 
+        // Call the user create callback
+        if ( $.isFunction(create) ) {
+          create.call( self.input );
+        }
 
         return self;
       },
 
-      fetch: function(type) {
+      open: function() {
+        var self = this;
+
+        // TODO: Add delay
+
+        self.fetch( self.method );
+        return this;
+      },
+
+      fetch: function() {
         var self = this,
           settings = self.settings,
+          method = self.method,
           query = self.$input.val(),
-          latestQuery = self.latestQuery;
+          latestQuery = self.latestQuery,
+          source = settings.source,
+          search = settings.search;
+
+        // Don't continue if the requirements for the query string isn't met
+        if ( $.type(query) !== 'string' || !self.isMinLength(query.length) ) {
+          return self;
+        }
+
+        // Call the user search callback
+        if ( $.isFunction(search) ) {
+          search.call( self.input );
+        }
 
         // If the query string is and same as the one in the previous fetch, just present the results again
         if ( $.type(latestQuery) === 'string' && $.isArray(self.suggestions) && query === latestQuery ) {
@@ -232,11 +283,20 @@
         self.latestQuery = query;
 
         // Filter suggestions from source parameter
-        if ( type === 'source' ) {
+        if ( method === 'function' ) {
+
+          // Recieve user callback return data as source
+          self.suggestions = source(query);
+
+          // Generate the results based on filtered suggestions
+          self.generateResults();
+
+        // Get filtered suggestions from Ajax request
+        } else if ( method === 'array' ) {
 
           // Filter the source
           var regexQuery = new RegExp('^' + query);
-          self.suggestions = $.grep(settings.source, function(item) {
+          self.suggestions = $.grep(source, function(item) {
             return item.match(regexQuery);
           });
 
@@ -244,22 +304,52 @@
           self.generateResults();
 
         // Get filtered suggestions from Ajax request
-        } else if ( type === 'ajax' ) {
+        } else if ( method === 'ajax' ) {
 
-          // Get filtered suggestions with an Ajax request
-          $.ajax({
-            type: settings.type,
-            url: settings.url,
-            data: {
-              q: query
-            },
-            success: function(suggestions) {
-              self.suggestions = suggestions;
+          var fieldName = settings.fieldName,
+            requestData = {},
+            currentRequest = self.request;
+
+          if ( currentRequest !== undefined && $.isFunction(currentRequest.abort) ) {
+            currentRequest.abort();
+          }
+
+          if ( $.type(fieldName) === 'string' ) {
+            requestData[ settings.fieldName ] = query;
+          } else {
+            throw new Error('The field name is not a string.');
+          }
+
+          // Extend the ajax settings deeply
+          var requestSettings = $.extend(true, {}, settings.ajax, {
+            url: source,
+            data: requestData,
+            success: function(data, status, xhr) {
+              var response = settings.response,
+                success = settings.ajax.success;
+
+              delete self.request;
+
+              // Call the ajax success callback
+              if ( $.isFunction(success) ) {
+                success.call(this, data, status, xhr);
+              }
+
+              // Call the user respons callback, returns the manipulated data
+              if ( $.isFunction(response) ) {
+                self.suggestions = response.call( self.input, data );
+              } else {
+                self.suggestions = data;
+              }
 
               // Generate the results based on filtered suggestions
               self.generateResults();
             }
           });
+
+          // Get filtered suggestions with an Ajax request
+          self.request = $.ajax(requestSettings);
+
         }
 
         return self;
@@ -328,6 +418,7 @@
       close: function() {
         var self = this,
           $results = self.$results,
+          close = self.settings.close,
           indexOf = $.inArray(self, openAutocompletes);
 
         // Empty and hide the results
@@ -337,6 +428,11 @@
 
         if ( indexOf > -1 ) {
           openAutocompletes.splice(indexOf, 1);
+        }
+
+        // Call the user close callback
+        if ( $.isFunction(close) ) {
+          close.call( self.input );
         }
 
         return self;

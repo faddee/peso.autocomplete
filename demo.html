@@ -19,7 +19,37 @@
   <script type="text/javascript">
     $(function() {
       $('.input-1').autocomplete({
-        url: 'demo.json'
+        source: '//ajax.googleapis.com/ajax/services/search/web',
+        ajax: {
+          data: {
+            v: '1.0'
+          },
+          dataType: 'jsonp'
+        },
+        change: function() {
+          console.log('change', this);
+        },
+        close: function() {
+          console.log('close', this);
+        },
+        create: function() {
+          console.log('create', this);
+        },
+        focus: function(target) {
+          console.log('focus', this, target);
+        },
+        response: function(data) {
+          console.log('resonse', data);
+          return $.map(data.responseData.results, function(result) {
+            return result.titleNoFormatting;
+          });
+        },
+        search: function() {
+          console.log('search', this);
+        },
+        select: function(target) {
+          console.log('select', this, target);
+        }
       });
       $('.input-2').autocomplete({
         source: [
