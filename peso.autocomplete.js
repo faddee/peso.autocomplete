@@ -22,19 +22,19 @@
     defaults = {
       // Core options
       source:           [],           // If it's a string, it will use it as the 'url' for an ajax request. If it's an array the plugin will filter it for you.
-      ajax:             {},           // Ajax settings, all of the options, except 'url', will be used: http://zeptojs.com/#$.ajax
+      ajax:             {},           // Ajax settings, all of the options, except 'url', will be used. Read more from: http://zeptojs.com/#$.ajax
       fieldName:        'q',          // Name of the query string field that will be used when 'source' is a URL. If other source type, this will be ignored.
       minLength:        2,            // Minimum number of characters before the autocomplete triggers
       maxResults:       10,           // Maximum number of results to show, 0 = unlimited
 
       // Events
-      change:           null,
-      close:            null,
-      create:           null,
-      focus:            null,
-      response:         null,
-      search:           null,
-      select:           null,
+      create:           null,         // User create event, triggers when the build is complete.
+      change:           null,         // User change event, triggers when the value in the input field changes.
+      search:           null,         // User search event, triggers when the minLength for the input value is met and a search is performed.
+      response:         null,         // User response event, triggers when the ajax response is complete and successfull. Useful for filtering the data.
+      focus:            null,         // User focus event, triggers when an suggestion item is focused.
+      select:           null,         // User select event, triggers when an suggestion item get selected.
+      close:            null,         // User close event, triggers when the autocomplete is closed.
 
       // Markup
       wrap:             true,         // Automatically wrap the input element, set to false you need to wrap it manually with CSS: position: relative;
@@ -50,7 +50,7 @@
     defaultMarkup = function(settings) {
 
       return {
-        markupWrapper: '<div class="' + settings.classPrefix + settings.classWrapper + '">',      // Wrapper markup
+        markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '">',   // Wrapper markup
         markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">', // Result container markup
         markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">', // Result item markup
         markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '">'   // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
@@ -172,12 +172,13 @@
               length = query.length,
               keyCode = event.type === 'keyup' && ( event.keyCode || event.which ),
               keyEvent = isKeyEvent(keyCode),
-              change = settings.change;
+              previousValue = $input.data('current-value');
+
+            $input.data('current-value', query);  
 
             // Call the user change callback
-            if ( !keyEvent && $.isFunction(change) && query !== $input.data('current-value') ) {
-              $input.data('current-value', query);
-              change.call( self.input );
+            if ( !keyEvent && query !== previousValue ) {
+              self.triggerEvent('change');
             }
 
             // Check if the keyup is dedicated to controll the autocomplete
@@ -205,10 +206,7 @@
 
           // Call the user focus callback
           .on('focus.' + pluginName, 'a', function() {
-            var focus = settings.focus;
-            if ( $.isFunction(focus) ) {
-              focus.call( input, this );
-            }
+            self.triggerEvent('focus', this);
           })
 
           // Attach keyup event handler on <a> tags
@@ -221,16 +219,13 @@
 
           // Attach click event handler
           .on('click.' + pluginName, 'a', function(event) {
-            var select = settings.select;
             event.preventDefault();
 
-            // Call the user create callback
-            if ( $.isFunction(select) ) {
-              select.call( input, this);
-            }
+            // Call the user select callback
+            self.triggerEvent('select', this);
 
             // Set the value to the input element
-            // TODO: Test without data-attribute
+            // TODO: Doable without data-attribute?
             $input.val($(this).data('suggestion'));
 
             // Close the autocompletion
@@ -238,9 +233,7 @@
           });
 
         // Call the user create callback
-        if ( $.isFunction(create) ) {
-          create.call( self.input );
-        }
+        self.triggerEvent('create');
 
         return self;
       },
@@ -260,18 +253,15 @@
           method = self.method,
           query = self.$input.val(),
           latestQuery = self.latestQuery,
-          source = settings.source,
-          search = settings.search;
+          source = settings.source;
 
-        // Don't continue if the requirements for the query string isn't met
+        // Don't continue if the requirements for the input value isn't met
         if ( $.type(query) !== 'string' || !self.isMinLength(query.length) ) {
           return self;
         }
 
         // Call the user search callback
-        if ( $.isFunction(search) ) {
-          search.call( self.input );
-        }
+        self.triggerEvent('search');
 
         // If the query string is and same as the one in the previous fetch, just present the results again
         if ( $.type(latestQuery) === 'string' && $.isArray(self.suggestions) && query === latestQuery ) {
@@ -325,8 +315,7 @@
             url: source,
             data: requestData,
             success: function(data, status, xhr) {
-              var response = settings.response,
-                success = settings.ajax.success;
+              var success = settings.ajax.success;
 
               delete self.request;
 
@@ -336,10 +325,13 @@
               }
 
               // Call the user respons callback, returns the manipulated data
-              if ( $.isFunction(response) ) {
-                self.suggestions = response.call( self.input, data );
-              } else {
+              var filtered = self.triggerEvent('response', data);
+
+              // If the user response callback is undefined, use original data
+              if ( filtered === undefined ) {
                 self.suggestions = data;
+              } else {
+                self.suggestions = filtered;
               }
 
               // Generate the results based on filtered suggestions
@@ -418,7 +410,6 @@
       close: function() {
         var self = this,
           $results = self.$results,
-          close = self.settings.close,
           indexOf = $.inArray(self, openAutocompletes);
 
         // Empty and hide the results
@@ -431,9 +422,7 @@
         }
 
         // Call the user close callback
-        if ( $.isFunction(close) ) {
-          close.call( self.input );
-        }
+        self.triggerEvent('close');
 
         return self;
       },
@@ -531,11 +520,29 @@
         return self;
       },
 
+      triggerEvent: function(event) {
+        var self = this,
+          settings = self.settings,
+          callback = settings[event];
+
+        // Check if user callback is a function
+        if ( $.isFunction(callback) ) {
+
+          // Make argument list to real array and remove the first argument
+          var argumentsArray = Array.prototype.slice.call(arguments);
+          argumentsArray.splice(0, 1);
+
+          // Apply the user callback
+          return callback.apply( self.input, argumentsArray );
+        }
+
+      },
+
       // Check if the length meets the requirements of the minLength parameter
       isMinLength: function(length) {
         var minLength = +this.settings.minLength;
         return ( minLength > 0 && +length >= minLength ) || !minLength;
-      }
+      },
 
     };
 
