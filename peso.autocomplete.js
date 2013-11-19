@@ -22,7 +22,7 @@
     defaults = {
       // Core options
       source:           [],           // If it's a string, it will use it as the 'url' for an ajax request. If it's an array the plugin will filter it for you.
-      ajax:             {},           // Ajax settings, all of the options, except 'url', will be used. Read more from: http://zeptojs.com/#$.ajax
+      ajax:             {},           // Ajax settings, all of the options, except 'url', will be extended. Read more from: http://zeptojs.com/#$.ajax
       fieldName:        'q',          // Name of the query string field that will be used when 'source' is a URL. If other source type, this will be ignored.
       minLength:        2,            // Minimum number of characters before the autocomplete triggers
       maxResults:       10,           // Maximum number of results to show, 0 = unlimited
@@ -129,14 +129,10 @@
         if ( settings.wrap === true ) {
           $wrapper = $(settings.markupWrapper);
           $input.wrap($wrapper);
-
-          // Make sure click events within the wrapper doesn't bubble
-          $wrapper.on('click.' + pluginName, stopPropagation);
-        } else {
-
-          // If you wan't to skip the wrapper, make sure click events within the input and results element doesn't bubble
-          $input.add($results).on('click.' + pluginName, stopPropagation);
         }
+
+        // Make sure click events on the input field or suggestion items doesn't bubble
+        $input.add($results).on('click.' + pluginName, stopPropagation);
 
         // Determine the source method
         if ( $.isArray(settings.source) ) {
@@ -183,8 +179,8 @@
             // Call default handler on focus or trigger the change event, calling the default handler if answer is true.
             } else if ( isFocus || value !== previousValue && self.trigger('change') ) {
 
-                // TODO: Bug in IE, when event type is focus the suggestions items shows and then closes a few ms after
-                defaultHandler( !isFocus );
+              // TODO: Bug in IE, when event type is focus the suggestions items shows and then closes a few ms after
+              defaultHandler( !isFocus );
             }
           });
 
