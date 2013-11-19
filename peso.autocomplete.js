@@ -29,11 +29,12 @@
 
       // Events
       create:           null,         // User create event, triggers when the build is complete.
-      change:           null,         // User change event, triggers when the value in the input field changes.
+      change:           null,         // User change event, triggers when the value in the input field changes. Default handler is preventable and it's performing the search and display, or undisplay for that matter, the autocomplete suggestion items if the requirements of the input value are met.
       search:           null,         // User search event, triggers when the minLength for the input value is met and a search is performed.
       response:         null,         // User response event, triggers when the ajax response is complete and successfull. Useful for filtering the data.
+      open:             null,         // User open event, triggers when the suggestion items are displaying or updated.
       focus:            null,         // User focus event, triggers when an suggestion item is focused.
-      select:           null,         // User select event, triggers when an suggestion item get selected.
+      select:           null,         // User select event, triggers when an suggestion item get selected. Default handler is preventable and it's performing the value update in the input field. Next up is closing the autocomplete suggestion items and that is not preventable.
       close:            null,         // User close event, triggers when the autocomplete is closed.
 
       // Markup
@@ -149,51 +150,54 @@
           // Adds a custom event handler to the input element so you can controll it
           // 
           // Example of how you open the results list:
-          // $('input.autocomplete__input').trigger('autocomplete', 'open');
+          // $('selector').trigger('autocomplete', 'open');
           // 
           // Example of how you close the results list:
-          // $('input.autocomplete__input').trigger('autocomplete', 'close');
+          // $('selector').trigger('autocomplete', 'close');
           // 
           // TODO: Add terminate autocomplete
-          .on(pluginName, function(event, action) {
-            // Open autocompletion
-            if ( action === 'open' ) {
-              self.open();
+          // TODO: Do properly with methods!!! E.g: $('selector').autocomplete('close');
+          // .on(pluginName, function(event, action) {
+          //   // Open autocompletion
+          //   if ( action === 'open' ) {
+          //     self.open();
 
-            // Close autocompletion
-            } else if ( action === 'close' ) {
-              self.close();
-            }
-          })
+          //   // Close autocompletion
+          //   } else if ( action === 'close' ) {
+          //     self.close();
+          //   }
+          // })
 
           // Focus and keyup event handlers
           .on('focus keyup', function(event) {
-            var query = $input.val(),
-              length = query.length,
-              keyCode = event.type === 'keyup' && ( event.keyCode || event.which ),
+            var value = $input.val(),
+              length = value.length,
+              type = event.type,
+              keyCode = type === 'keyup' && event.keyCode || event.which,
               keyEvent = isKeyEvent(keyCode),
-              previousValue = $input.data('current-value');
+              previousValue = $input.data('current-value'),
+              defaultHandler = function() {
 
-            $input.data('current-value', query);  
+                // Check if the input value meets the requirements of the minLength parameter
+                if ( self.isMinLength(length) ) {
+                  self.open();
 
-            // Call the user change callback
-            if ( !keyEvent && query !== previousValue ) {
-              self.triggerEvent('change');
-            }
+                // If not and the result list is visible, close it
+                } else if ( isVisible($results) ) {
+                  self.close();
+                }
+              };
+
+            $input.data('current-value', value);  
 
             // Check if the keyup is dedicated to controll the autocomplete
             if ( keyEvent ) {
-              self.keyEvent(keyCode, event.target);
+              self.keyHandler(keyCode, event.target);
 
-            // Check if the query string meets the requirements of the minLength parameter
-            } else if ( self.isMinLength(length) ) {
-              self.open();
-
-            // If not and the result list is visible, close it
-            } else if ( isVisible($results) ) {
-              self.close();
+            // Call default handler on focus or trigger the change event, calling the default handler if answer is true.
+            } else if ( type === 'focus' || value !== previousValue && self.trigger('change') ) {
+                defaultHandler();
             }
-
           });
 
         $results
@@ -206,34 +210,41 @@
 
           // Call the user focus callback
           .on('focus.' + pluginName, 'a', function() {
-            self.triggerEvent('focus', this);
+            self.trigger('focus', {
+              target: this
+            });
           })
 
           // Attach keyup event handler on <a> tags
           .on('keyup.' + pluginName, 'a', function(event) {
             var key = event.keyCode || event.which || null;
             if ( isKeyEvent(key) ) {
-              self.keyEvent(key, event.target);
+              self.keyHandler(key, event.target);
             }
           })
 
           // Attach click event handler
           .on('click.' + pluginName, 'a', function(event) {
+            var data = {
+              target: this
+            };
+
             event.preventDefault();
 
             // Call the user select callback
-            self.triggerEvent('select', this);
+            if ( self.trigger('select', data) ) {
 
             // Set the value to the input element
             // TODO: Doable without data-attribute?
-            $input.val($(this).data('suggestion'));
+              $input.val( $(this).data('suggestion') );
+            }
 
             // Close the autocompletion
             self.close();
           });
 
         // Call the user create callback
-        self.triggerEvent('create');
+        self.trigger('create');
 
         return self;
       },
@@ -253,7 +264,8 @@
           method = self.method,
           query = self.$input.val(),
           latestQuery = self.latestQuery,
-          source = settings.source;
+          source = settings.source,
+          data;
 
         // Don't continue if the requirements for the input value isn't met
         if ( $.type(query) !== 'string' || !self.isMinLength(query.length) ) {
@@ -261,7 +273,7 @@
         }
 
         // Call the user search callback
-        self.triggerEvent('search');
+        self.trigger('search');
 
         // If the query string is and same as the one in the previous fetch, just present the results again
         if ( $.type(latestQuery) === 'string' && $.isArray(self.suggestions) && query === latestQuery ) {
@@ -275,8 +287,16 @@
         // Filter suggestions from source parameter
         if ( method === 'function' ) {
 
-          // Recieve user callback return data as source
-          self.suggestions = source(query);
+          // Recieve custom callback data as source
+          data = {
+            content: source(query)
+          };
+
+          // Trigger the user respons callback
+          self.trigger('response', data);
+
+          // Save the suggestions to the instance
+          self.suggestions = data.content;
 
           // Generate the results based on filtered suggestions
           self.generateResults();
@@ -286,9 +306,18 @@
 
           // Filter the source
           var regexQuery = new RegExp('^' + query);
-          self.suggestions = $.grep(source, function(item) {
-            return item.match(regexQuery);
-          });
+
+          data = {
+            content: $.grep(source, function(item) {
+              return item.match(regexQuery);
+            })
+          };
+
+          // Trigger the user respons callback
+          self.trigger('response', data);
+
+          // Save the suggestions to the instance
+          self.suggestions = data.content;
 
           // Generate the results based on filtered suggestions
           self.generateResults();
@@ -314,25 +343,25 @@
           var requestSettings = $.extend(true, {}, settings.ajax, {
             url: source,
             data: requestData,
-            success: function(data, status, xhr) {
+            success: function(responseData, status, xhr) {
               var success = settings.ajax.success;
 
               delete self.request;
 
               // Call the ajax success callback
               if ( $.isFunction(success) ) {
-                success.call(this, data, status, xhr);
+                success.call(this, responseData, status, xhr);
               }
 
-              // Call the user respons callback, returns the manipulated data
-              var filtered = self.triggerEvent('response', data);
+              data = {
+                content: responseData
+              };
 
-              // If the user response callback is undefined, use original data
-              if ( filtered === undefined ) {
-                self.suggestions = data;
-              } else {
-                self.suggestions = filtered;
-              }
+              // Trigger the user respons callback
+              self.trigger('response', data);
+
+              // Save the suggestions to the instance
+              self.suggestions = data.content;
 
               // Generate the results based on filtered suggestions
               self.generateResults();
@@ -402,6 +431,8 @@
         // Show the results when it's ready
         $results.show();
 
+        self.trigger('open');
+
         openAutocompletes.push(this);
 
         return self;
@@ -422,12 +453,12 @@
         }
 
         // Call the user close callback
-        self.triggerEvent('close');
+        self.trigger('close');
 
         return self;
       },
 
-      keyEvent: function(key, target) {
+      keyHandler: function(key, target) {
         var self = this,
           $target = $(target),
           $results = self.$results,
@@ -476,7 +507,7 @@
                 .focus();
 
             // On key up when input element is focused or key down when the last suggestion link is focused
-            } else if ( ( isResultsVisible && isTargetInput && isKeyUp ) || ( isTargetSuggestion && isKeyDown && $target.parent().is(':last-child') ) ) {
+            } else if ( isResultsVisible && isTargetInput && isKeyUp ) {
 
               // Close the autocompletion
               self.close();
@@ -520,21 +551,24 @@
         return self;
       },
 
-      triggerEvent: function(event) {
+      trigger: function(eventName) {
         var self = this,
-          settings = self.settings,
-          callback = settings[event];
+          callback = self.settings[eventName],
 
-        // Check if user callback is a function
-        if ( $.isFunction(callback) ) {
+          // Custom event
+          event = $.Event( pluginName + eventName ),
 
           // Make argument list to real array and remove the first argument
-          var argumentsArray = Array.prototype.slice.call(arguments);
-          argumentsArray.splice(0, 1);
+          data = Array.prototype.slice.call(arguments);
 
-          // Apply the user callback
-          return callback.apply( self.input, argumentsArray );
-        }
+        // Remove first argument
+        data.splice(0, 1);
+
+        // Trigger custom event
+        self.$input.trigger(event, data);
+
+        // Apply the user callback and return whether default is prevented
+        return !( $.isFunction(callback) && callback.apply( self.input, [event].concat(data) ) === false || event.isDefaultPrevented() );
 
       },
 

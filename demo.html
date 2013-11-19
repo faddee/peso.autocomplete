@@ -26,29 +26,10 @@
           },
           dataType: 'jsonp'
         },
-        change: function() {
-          console.log('change', this);
-        },
-        close: function() {
-          console.log('close', this);
-        },
-        create: function() {
-          console.log('create', this);
-        },
-        focus: function(target) {
-          console.log('focus', this, target);
-        },
-        response: function(data) {
-          console.log('resonse', data);
-          return $.map(data.responseData.results, function(result) {
+        response: function(event, data) {
+          data.content = $.map(data.content.responseData.results, function(result) {
             return result.titleNoFormatting;
           });
-        },
-        search: function() {
-          console.log('search', this);
-        },
-        select: function(target) {
-          console.log('select', this, target);
         }
       });
       $('.input-2').autocomplete({
