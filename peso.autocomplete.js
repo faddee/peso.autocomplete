@@ -10,7 +10,7 @@
  */
 (function(undefined) {
 
-  var 
+  var
 
     // Define of either Zepto or jQuery, or other $ library for that matter.
     $ = this.$,
@@ -26,6 +26,7 @@
       fieldName:        'q',          // Name of the query string field that will be used when 'source' is a URL. If other source type, this will be ignored.
       minLength:        2,            // Minimum number of characters before the autocomplete triggers
       maxResults:       10,           // Maximum number of results to show, 0 = unlimited
+      delay:            500,          // Delay in ms between change and open
 
       // Events
       create:           null,         // User create event, triggers when the build is complete.
@@ -174,13 +175,14 @@
               length = value.length,
               type = event.type,
               keyCode = type === 'keyup' && event.keyCode || event.which,
-              keyEvent = isKeyEvent(keyCode),
+              isKey = isKeyEvent(keyCode),
+              isFocus = type === 'focus',
               previousValue = $input.data('current-value'),
-              defaultHandler = function() {
+              defaultHandler = function(delaying) {
 
                 // Check if the input value meets the requirements of the minLength parameter
                 if ( self.isMinLength(length) ) {
-                  self.open();
+                  self.open(delaying);
 
                 // If not and the result list is visible, close it
                 } else if ( isVisible($results) ) {
@@ -191,12 +193,12 @@
             $input.data('current-value', value);  
 
             // Check if the keyup is dedicated to controll the autocomplete
-            if ( keyEvent ) {
+            if ( isKey ) {
               self.keyHandler(keyCode, event.target);
 
             // Call default handler on focus or trigger the change event, calling the default handler if answer is true.
-            } else if ( type === 'focus' || value !== previousValue && self.trigger('change') ) {
-                defaultHandler();
+            } else if ( isFocus || value !== previousValue && self.trigger('change') ) {
+                defaultHandler( !isFocus );
             }
           });
 
@@ -249,12 +251,33 @@
         return self;
       },
 
-      open: function() {
-        var self = this;
+      open: function(delaying) {
+        var self = this,
 
-        // TODO: Add delay
+          // Clear timeout
+          clear = function() {
+            if ( self.timeout !== undefined ) {
+              clearTimeout( self.timeout );
+              delete self.timeout;
+            }
+          },
 
-        self.fetch( self.method );
+          // Search executer
+          execute = function() {
+            self.fetch( self.method );
+            clear();
+          };
+
+        clear();
+
+        if ( delaying === true ) {
+
+          // Delay before executing
+          self.timeout = setTimeout(execute, self.settings.delay);
+        } else {
+          execute();
+        }
+
         return this;
       },
 
