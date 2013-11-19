@@ -67,6 +67,11 @@
       down: 40
     },
 
+    // Array of available mathods
+    methods = [
+      'close'
+    ],
+
     // Check whether the element is visible or not, insired by Zepto Select-plugin
     isVisible = function(element) {
       var $element = $(element);
@@ -86,7 +91,7 @@
       event.stopPropagation();
     },
 
-    openAutocompletes = [],
+    autocompletes = [],
 
     // Definition of the contructor
     Autocomplete = function(options) {
@@ -148,27 +153,6 @@
           // Save the currect value
           .data('current-value', $input.val())
 
-          // Adds a custom event handler to the input element so you can controll it
-          // 
-          // Example of how you open the results list:
-          // $('selector').trigger('autocomplete', 'open');
-          // 
-          // Example of how you close the results list:
-          // $('selector').trigger('autocomplete', 'close');
-          // 
-          // TODO: Add terminate autocomplete
-          // TODO: Do properly with methods!!! E.g: $('selector').autocomplete('close');
-          // .on(pluginName, function(event, action) {
-          //   // Open autocompletion
-          //   if ( action === 'open' ) {
-          //     self.open();
-
-          //   // Close autocompletion
-          //   } else if ( action === 'close' ) {
-          //     self.close();
-          //   }
-          // })
-
           // Focus and keyup event handlers
           .on('focus keyup', function(event) {
             var value = $input.val(),
@@ -198,6 +182,8 @@
 
             // Call default handler on focus or trigger the change event, calling the default handler if answer is true.
             } else if ( isFocus || value !== previousValue && self.trigger('change') ) {
+
+                // TODO: Bug in IE, when event type is focus the suggestions items shows and then closes a few ms after
                 defaultHandler( !isFocus );
             }
           });
@@ -247,6 +233,8 @@
 
         // Call the user create callback
         self.trigger('create');
+
+        autocompletes.push(this);
 
         return self;
       },
@@ -456,24 +444,17 @@
 
         self.trigger('open');
 
-        openAutocompletes.push(this);
-
         return self;
       },
 
       close: function() {
         var self = this,
-          $results = self.$results,
-          indexOf = $.inArray(self, openAutocompletes);
+          $results = self.$results;
 
         // Empty and hide the results
         $results
           .hide()
           .empty();
-
-        if ( indexOf > -1 ) {
-          openAutocompletes.splice(indexOf, 1);
-        }
 
         // Call the user close callback
         self.trigger('close');
@@ -592,14 +573,17 @@
 
         // Apply the user callback and return whether default is prevented
         return !( $.isFunction(callback) && callback.apply( self.input, [event].concat(data) ) === false || event.isDefaultPrevented() );
+      },
 
+      isOpen: function() {
+        return isVisible(this.$results);
       },
 
       // Check if the length meets the requirements of the minLength parameter
       isMinLength: function(length) {
         var minLength = +this.settings.minLength;
-        return ( minLength > 0 && +length >= minLength ) || !minLength;
-      },
+        return minLength > 0 && +length >= minLength || !minLength;
+      }
 
     };
 
@@ -607,13 +591,38 @@
     $.fn[pluginName] = function(options) {
 
       return this.each(function() {
-        var $self = $(this);
+        var self = this,
+          $self = $(this);
 
         // Check whether the element is usable
         if ( $self.is('input') && ($self.is(':not([type])') || $self.is('[type=text]')) ) {
 
-          // Trigger the contructor
-          (new Autocomplete(options)).build(this);
+          // If options is an string, it will call a method
+          if ( $.type(options) === 'string' ) {
+
+            // Example of how you close the results list:
+            // $('selector').autocomplete('close');
+            // TODO: Add destroy method
+            // TODO: Add disable method
+            // TODO: Add enable method
+            // TODO: Add option method
+            // TODO: Add search method
+
+            // Filter the instance for that element
+            var instance = $.grep(autocompletes, function(autocomplete) {
+              return autocomplete.input === self;
+            });
+
+            // If there is an instance available, trigger the method
+            if ( '0' in instance && $.inArray(options, methods) !== -1 ) {
+              instance[0][options]();
+            }
+
+          // ... otherwise create an instance
+          } else {
+
+            (new Autocomplete(options)).build(this);
+          }
 
         // ..if not, throw an error about it
         } else {
@@ -624,10 +633,10 @@
 
     // Attach a click event handler to close the autocomplete when the user clicks outside it
     $(document).on('click.' + pluginName, function() {
-      var autocompletes = $.extend([], openAutocompletes);
       $.each(autocompletes, function() {
-        if ( isVisible(this.$results) ) {
-          this.close();
+        var self = this;
+        if ( self.isOpen() ) {
+          self.close();
         }
       });
     });
