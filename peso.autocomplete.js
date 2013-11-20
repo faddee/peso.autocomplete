@@ -175,7 +175,7 @@
           .data('current-value', $input.val())
 
           // Focus and keyup event handlers
-          .on('focus.' + pluginName + ' keyup.' + pluginName, function(event) {
+          .on('focus.' + pluginName + ' keydown.' + pluginName, function(event) {
             var value = $input.val(),
               length = value.length,
               type = event.type,
@@ -199,6 +199,12 @@
 
             // Check if the keyup is dedicated to controll the autocomplete
             if ( isKey ) {
+
+              // Prevent default handler if key press is arrow up or down
+              if ( keyCode === keyMap.up || keyCode === keyMap.down ) {
+                event.preventDefault();
+              }
+
               self.keyHandler(keyCode, event.target);
 
             // Call default handler on focus or trigger the change event, calling the default handler if answer is true.
@@ -227,10 +233,16 @@
           })
 
           // Attach keyup event handler on <a> tags
-          .on('keyup.' + pluginName, 'a', function(event) {
-            var key = event.keyCode || event.which || null;
-            if ( isKeyEvent(key) ) {
-              self.keyHandler(key, event.target);
+          .on('keydown.' + pluginName, 'a', function(event) {
+            var keyCode = event.keyCode || event.which || null;
+            if ( isKeyEvent(keyCode) ) {
+
+              // Prevent default handler if key press is arrow up or down
+              if ( keyCode === keyMap.up || keyCode === keyMap.down ) {
+                event.preventDefault();
+              }
+
+              self.keyHandler(keyCode, event.target);
             }
           })
 
