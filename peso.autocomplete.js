@@ -59,6 +59,23 @@
       };
     },
 
+    // Array of available mathods
+    // 
+    // Examples of available mathods:
+    // $('selector').autocomplete('close');
+    // $('selector').autocomplete('close');
+    // TODO: Add disable method
+    // TODO: Add enable method
+    // TODO: Add option method
+    // TODO: Add search method
+    methods = [
+      'close',
+      'destroy'
+    ],
+
+    // Stash all the instances
+    instances = [],
+
     // Key map of the used keys that controlls the autocomplete
     keyMap = {
       enter: 13,
@@ -67,10 +84,17 @@
       down: 40
     },
 
-    // Array of available mathods
-    methods = [
-      'close'
-    ],
+    // Get an instance
+    getInstance = function(input) {
+      return $.grep(instances, function(instance) {
+        return instance.input === input;
+      })[0] || null;
+    },
+
+    // Don't bubble events when using the autocompletion
+    stopPropagation = function(event) {
+      event.stopPropagation();
+    },
 
     // Check whether the element is visible or not, insired by Zepto Select-plugin
     isVisible = function(element) {
@@ -86,13 +110,6 @@
       return $.type(key) === 'number' && key > 0 && ( key === keyMap.enter || key === keyMap.esc || key === keyMap.up || key === keyMap.down );
     },
 
-    // Don't bubble events when using the autocompletion
-    stopPropagation = function(event) {
-      event.stopPropagation();
-    },
-
-    autocompletes = [],
-
     // Definition of the contructor
     Autocomplete = function(options) {
 
@@ -105,6 +122,11 @@
 
     Autocomplete.prototype = {
 
+      /**
+       * Core
+       */
+
+      // Set the grounds
       build: function(element) {
         var self = this,
           settings = self.settings,
@@ -116,9 +138,7 @@
           $input = self.$input = $(element),
 
           // Create the result list object and store it
-          $results = self.$results = $(settings.markupResultList),
-
-          $wrapper = self.$wrapper;
+          $results = self.$results = $(settings.markupResultList);
 
         // Add class to the input element
         if ( $.type(settings.classInput) === 'string' ) {
@@ -127,7 +147,7 @@
 
         // Wraps the input element
         if ( settings.wrap === true ) {
-          $wrapper = $(settings.markupWrapper);
+          var $wrapper = self.$wrapper = $(settings.markupWrapper);
           $input.wrap($wrapper);
         }
 
@@ -150,7 +170,7 @@
           .data('current-value', $input.val())
 
           // Focus and keyup event handlers
-          .on('focus keyup', function(event) {
+          .on('focus.' + pluginName + ' keyup.' + pluginName, function(event) {
             var value = $input.val(),
               length = value.length,
               type = event.type,
@@ -230,29 +250,25 @@
         // Call the user create callback
         self.trigger('create');
 
-        autocompletes.push(this);
+        instances.push(this);
 
         return self;
       },
 
+      // Execute the search
       open: function(delaying) {
         var self = this,
-
-          // Clear timeout
-          clear = function() {
-            if ( self.timeout !== undefined ) {
-              clearTimeout( self.timeout );
-              delete self.timeout;
-            }
-          },
 
           // Search executer
           execute = function() {
             self.fetch( self.method );
-            clear();
           };
 
-        clear();
+        // Clear timeout
+        if ( self.timeout !== undefined ) {
+          clearTimeout( self.timeout );
+          delete self.timeout;
+        }
 
         if ( delaying === true ) {
 
@@ -265,6 +281,7 @@
         return this;
       },
 
+      // Performing the search based on the source when conditions are met
       fetch: function() {
         var self = this,
           settings = self.settings,
@@ -383,6 +400,7 @@
         return self;
       },
 
+      // Generating the results to the DOM
       generateResults: function() {
         var self = this,
           settings = self.settings,
@@ -443,21 +461,11 @@
         return self;
       },
 
-      close: function() {
-        var self = this,
-          $results = self.$results;
+      /**
+       * Event
+       */
 
-        // Empty and hide the results
-        $results
-          .hide()
-          .empty();
-
-        // Call the user close callback
-        self.trigger('close');
-
-        return self;
-      },
-
+      // Handling plugin specific key events
       keyHandler: function(key, target) {
         var self = this,
           $target = $(target),
@@ -551,6 +559,7 @@
         return self;
       },
 
+      // Trigger an custom event
       trigger: function(eventName) {
         var self = this,
           callback = self.settings[eventName],
@@ -571,6 +580,59 @@
         return !( $.isFunction(callback) && callback.apply( self.input, [event].concat(data) ) === false || event.isDefaultPrevented() );
       },
 
+      /**
+       * Public methods
+       */
+
+      // Close the results
+      close: function() {
+        var self = this,
+          $results = self.$results;
+
+        // Empty and hide the results
+        $results
+          .hide()
+          .empty();
+
+        // Call the user close callback
+        self.trigger('close');
+
+        return self;
+      },
+
+      // Destroy the autocomplete
+      destroy: function() {
+        var self = this,
+          settings = self.settings,
+          $input = self.$input,
+          $results = self.$results,
+          indexOf = $.inArray(self, instances);
+
+        $input
+          .off('click.' + pluginName)
+          .off('focus.' + pluginName)
+          .off('keyup.' + pluginName)
+          .removeClass(settings.classPrefix + settings.classInput)
+          .data('current-value', null);
+
+        $results.remove();
+
+        if ( self.$wrapper !== undefined ) {
+          $input.unwrap();
+        }
+        console.log(instances);
+
+        if ( indexOf > -1 ) {
+          instances.splice(indexOf, 1);
+        }
+        console.log(instances);
+      },
+
+      /**
+       * Helpers
+       */
+
+      // Check whether the results are being shown or not
       isOpen: function() {
         return isVisible(this.$results);
       },
@@ -594,24 +656,14 @@
         if ( $self.is('input') && ($self.is(':not([type])') || $self.is('[type=text]')) ) {
 
           // If options is an string, it will call a method
-          if ( $.type(options) === 'string' ) {
-
-            // Example of how you close the results list:
-            // $('selector').autocomplete('close');
-            // TODO: Add destroy method
-            // TODO: Add disable method
-            // TODO: Add enable method
-            // TODO: Add option method
-            // TODO: Add search method
+          if ( $.type(options) === 'string' && !!options ) {
 
             // Filter the instance for that element
-            var instance = $.grep(autocompletes, function(autocomplete) {
-              return autocomplete.input === self;
-            });
+            var instance = getInstance(self);
 
             // If there is an instance available, trigger the method
-            if ( '0' in instance && $.inArray(options, methods) !== -1 ) {
-              instance[0][options]();
+            if ( instance !== null && $.inArray(options, methods) !== -1 ) {
+              instance[options]();
             }
 
           // ... otherwise create an instance
@@ -629,7 +681,7 @@
 
     // Attach a click event handler to close the autocomplete when the user clicks outside it
     $(document).on('click.' + pluginName, function() {
-      $.each(autocompletes, function() {
+      $.each(instances, function() {
         var self = this;
         if ( self.isOpen() ) {
           self.close();
