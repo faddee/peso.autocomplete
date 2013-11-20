@@ -137,6 +137,9 @@
           input = self.input = element,
           $input = self.$input = $(element),
 
+          // Save the original input element
+          original = self.original = $input.clone()[0],
+
           // Create the result list object and store it
           $results = self.$results = $(settings.markupResultList);
 
@@ -165,6 +168,8 @@
 
         // Listen and handling events on the input element
         $input
+
+          .attr('autocomplete', 'off')
 
           // Save the currect value
           .data('current-value', $input.val())
@@ -214,9 +219,11 @@
 
           // Call the user focus callback
           .on('focus.' + pluginName, 'a', function() {
-            self.trigger('focus', {
-              target: this
-            });
+            var data = {
+              target: this,
+              value: $(this).data('suggestion')
+            };
+            self.trigger('focus', data);
           })
 
           // Attach keyup event handler on <a> tags
@@ -230,7 +237,8 @@
           // Attach click event handler
           .on('click.' + pluginName, 'a', function(event) {
             var data = {
-              target: this
+              target: this,
+              value: $(this).data('suggestion')
             };
 
             event.preventDefault();
@@ -238,8 +246,8 @@
             // Call the user select callback
             if ( self.trigger('select', data) ) {
 
-            // Set the value to the input element
-            // TODO: Doable without data-attribute?
+              // Set the value to the input element
+              // TODO: Doable without data-attribute?
               $input.val( $(this).data('suggestion') );
             }
 
@@ -608,24 +616,17 @@
           $results = self.$results,
           indexOf = $.inArray(self, instances);
 
-        $input
-          .off('click.' + pluginName)
-          .off('focus.' + pluginName)
-          .off('keyup.' + pluginName)
-          .removeClass(settings.classPrefix + settings.classInput)
-          .data('current-value', null);
-
         $results.remove();
 
         if ( self.$wrapper !== undefined ) {
           $input.unwrap();
         }
-        console.log(instances);
+
+        $input.replaceWith( self.original );
 
         if ( indexOf > -1 ) {
           instances.splice(indexOf, 1);
         }
-        console.log(instances);
       },
 
       /**
