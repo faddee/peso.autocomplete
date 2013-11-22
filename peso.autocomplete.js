@@ -52,10 +52,10 @@
     defaultMarkup = function(settings) {
 
       return {
-        markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '">',   // Wrapper markup
-        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">', // Result container markup
-        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">', // Result item markup
-        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '">'   // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
+        markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '">',           // Wrapper markup
+        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">',         // Result container markup
+        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">',         // Result item markup
+        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '" href="#">'  // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
       };
     },
 
@@ -174,19 +174,29 @@
           // Save the currect value
           .data('current-value', $input.val())
 
+          .on('keydown.' + pluginName, 'a', function() {
+              var keyCode = +(type === 'keyup' && (event.keyCode || event.which));
+
+              // Prevent default handler if key press is arrow up or down
+              if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
+                event.preventDefault();
+              }
+
+          })
+
           // Focus and keyup event handlers
-          .on('focus.' + pluginName + ' keydown.' + pluginName, function(event) {
+          .on('focus.' + pluginName + ' keyup.' + pluginName, function(event) {
             var value = $input.val(),
               length = value.length,
               type = event.type,
-              keyCode = type === 'keyup' && event.keyCode || event.which,
+              keyCode = +(type === 'keyup' && (event.keyCode || event.which)),
               isKey = isKeyEvent(keyCode),
               isFocus = type === 'focus',
               previousValue = $input.data('current-value'),
               defaultHandler = function(delaying) {
 
                 // Check if the input value meets the requirements of the minLength parameter
-                if ( self.isMinLength(length) ) {
+                if ( self.isLength(length) ) {
                   self.open(delaying);
 
                 // If not and the result list is visible, close it
@@ -199,11 +209,6 @@
 
             // Check if the keyup is dedicated to controll the autocomplete
             if ( isKey ) {
-
-              // Prevent default handler if key press is arrow up or down
-              if ( keyCode === keyMap.up || keyCode === keyMap.down ) {
-                event.preventDefault();
-              }
 
               self.keyHandler(keyCode, event.target);
 
@@ -225,10 +230,12 @@
 
           // Call the user focus callback
           .on('focus.' + pluginName, 'a', function() {
-            var data = {
-              target: this,
-              value: $(this).data('suggestion')
-            };
+            var $item = $(this),
+              data = {
+                target: this,
+                value: $item.data('item-value'),
+                label: $item.text()
+              };
             self.trigger('focus', data);
           })
 
@@ -248,10 +255,14 @@
 
           // Attach click event handler
           .on('click.' + pluginName, 'a', function(event) {
-            var data = {
-              target: this,
-              value: $(this).data('suggestion')
-            };
+            var $item = $(this),
+              value = $item.data('item-value'),
+              label = $item.text(),
+              data = {
+                target: this,
+                value: value,
+                label: label
+              };
 
             event.preventDefault();
 
@@ -260,7 +271,10 @@
 
               // Set the value to the input element
               // TODO: Doable without data-attribute?
-              $input.val( $(this).data('suggestion') );
+              $input.val(value);
+              $input
+                .data('item-label', label)
+                .data('current-value', value);
             }
 
             // Close the autocompletion
@@ -312,7 +326,7 @@
           data;
 
         // Don't continue if the requirements for the input value isn't met
-        if ( $.type(query) !== 'string' || !self.isMinLength(query.length) ) {
+        if ( $.type(query) !== 'string' || !self.isLength(query.length) ) {
           return self;
         }
 
@@ -321,7 +335,7 @@
 
         // If the query string is and same as the one in the previous fetch, just present the results again
         if ( $.type(latestQuery) === 'string' && $.isArray(self.suggestions) && query === latestQuery ) {
-          self.generateResults();
+          self.generate();
           return this;
         }
 
@@ -343,7 +357,7 @@
           self.suggestions = data.content;
 
           // Generate the results based on filtered suggestions
-          self.generateResults();
+          self.generate();
 
         // Get filtered suggestions from Ajax request
         } else if ( method === 'array' ) {
@@ -353,7 +367,8 @@
 
           data = {
             content: $.grep(source, function(item) {
-              return item.match(regexQuery);
+              var label = $.type(item) === 'string' && item || $.isPlainObject(item) && $.type(item.value) ===  'string' && item.value;
+              return label.match(regexQuery);
             })
           };
 
@@ -364,7 +379,7 @@
           self.suggestions = data.content;
 
           // Generate the results based on filtered suggestions
-          self.generateResults();
+          self.generate();
 
         // Get filtered suggestions from Ajax request
         } else if ( method === 'ajax' ) {
@@ -408,7 +423,7 @@
               self.suggestions = data.content;
 
               // Generate the results based on filtered suggestions
-              self.generateResults();
+              self.generate();
             }
           });
 
@@ -421,7 +436,7 @@
       },
 
       // Generating the results to the DOM
-      generateResults: function() {
+      generate: function() {
         var self = this,
           settings = self.settings,
           maxResults = +settings.maxResults,
@@ -450,21 +465,22 @@
         $results.empty();
 
         // Start generating each suggestions
-        $.each(suggestions, function(key, value) {
+        $.each(suggestions, function(key, item) {
 
           var $item = $itemTemplate.clone(),
-            $link = $linkTemplate.clone();
+            $link = $linkTemplate.clone(),
+            isString = $.type(item) === 'string',
+            isObject = $.isPlainObject(item),
+            value = isString && item || isObject && $.type(item.value) && item.value,
+            label = isString && item || isObject && $.type(item.label) && item.label;
 
           $link
 
-            // Set the href-attribute to something
-            .attr('href', '#')
+            // Save the suggestion value
+            .data('item-value', value)
 
             // Present the suggestion as text
-            .text(value)
-
-            // Save the suggestion value
-            .data('suggestion', value);
+            .text(label);
 
           // Append the link as a child to the item
           $item.append($link);
@@ -521,7 +537,7 @@
               isTargetSuggestion = isResultsVisible && !isTargetInput;
 
             // On key down when input element is focused
-            if ( isTargetInput && isKeyDown && self.isMinLength( $input.val().length ) ) {
+            if ( isTargetInput && isKeyDown && self.isLength( $input.val().length ) ) {
 
               // Make sure the autocompletion is open
               if (!isResultsVisible) {
@@ -557,7 +573,7 @@
             }
           };
 
-        switch(+key) {
+        switch(key) {
 
           // Enter key handler
           case keyMap.enter:
@@ -651,7 +667,7 @@
       },
 
       // Check if the length meets the requirements of the minLength parameter
-      isMinLength: function(length) {
+      isLength: function(length) {
         var minLength = +this.settings.minLength;
         return minLength > 0 && +length >= minLength || !minLength;
       }
