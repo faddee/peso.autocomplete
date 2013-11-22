@@ -479,11 +479,16 @@
             value = isString && item || isObject && $.type(item.value) && item.value,
             label = self.escape( isString && item || isObject && $.type(item.label) && item.label );
 
+          // Heighlight search words in the label
           $.each(words, function(index, word) {
             if ( word.length > 0 ) {
+              // Escape the word
               var wordEscaped = self.escape(word),
+
+                // Regex the escaped string
                 regexWord = new RegExp(wordEscaped, 'ig');
 
+              // Replace matches with HTML
               label = label.replace(regexWord, function(match) {
                 var $wordHighlight = $wordTemplate.clone().text(match),
                   wordHighlight = $wordHighlight[0].outerHTML;
@@ -678,7 +683,8 @@
       /**
        * Helpers
        */
-      
+
+      // Escape a string to HTML special characters
       escape: function(string) {
         return $('<span>').text(string).html();
       },
