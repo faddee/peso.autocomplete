@@ -45,7 +45,8 @@
       classInput:       '__input',    // The class name for the input element, set to null if you wan't to do it manually
       classResultList:  '__results',  // The class name of the result list container
       classResultItem:  '__item',     // The class name of the result list item
-      classResultLink:  '__link'      // The class name of the suggestion link
+      classResultLink:  '__link',     // The class name of the suggestion link
+      classHighlight:   '__highlight' // The class name of the highlighted string
     },
 
     // Default markup
@@ -55,7 +56,8 @@
         markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '">',           // Wrapper markup
         markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">',         // Result container markup
         markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">',         // Result item markup
-        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '" href="#">'  // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
+        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '" href="#">', // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
+        markupHighlight:  '<span class="' + settings.classPrefix + settings.classHighlight + '">'         // Highlight word markup
       };
     },
 
@@ -441,9 +443,11 @@
           settings = self.settings,
           maxResults = +settings.maxResults,
           suggestions = self.suggestions,
+          words = self.$input.val().split(/\s/),
           $results = self.$results,
           $itemTemplate = $(settings.markupResultItem),
-          $linkTemplate = $(settings.markupResultLink);
+          $linkTemplate = $(settings.markupResultLink),
+          $wordTemplate = $(settings.markupHighlight);
 
         // The suggestions must be an array to be able to continue
         if ( !$.isArray(suggestions) ) {
@@ -453,6 +457,7 @@
 
         // Abort if there's no suggestions to present
         if ( !suggestions.length ) {
+          self.close();
           return self;
         }
 
@@ -472,7 +477,20 @@
             isString = $.type(item) === 'string',
             isObject = $.isPlainObject(item),
             value = isString && item || isObject && $.type(item.value) && item.value,
-            label = isString && item || isObject && $.type(item.label) && item.label;
+            label = self.escape( isString && item || isObject && $.type(item.label) && item.label );
+
+          $.each(words, function(index, word) {
+            if ( word.length > 0 ) {
+              var wordEscaped = self.escape(word),
+                regexWord = new RegExp(wordEscaped, 'ig');
+
+              label = label.replace(regexWord, function(match) {
+                var $wordHighlight = $wordTemplate.clone().text(match),
+                  wordHighlight = $wordHighlight[0].outerHTML;
+                return wordHighlight;
+              });
+            }
+          });
 
           $link
 
@@ -480,7 +498,7 @@
             .data('item-value', value)
 
             // Present the suggestion as text
-            .text(label);
+            .html(label);
 
           // Append the link as a child to the item
           $item.append($link);
@@ -660,6 +678,10 @@
       /**
        * Helpers
        */
+      
+      escape: function(string) {
+        return $('<span>').text(string).html();
+      },
 
       // Check whether the results are being shown or not
       isOpen: function() {
