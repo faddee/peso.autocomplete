@@ -175,8 +175,8 @@
           // Save the currect value
           .data('current-value', $input.val())
 
-          .on('keydown.' + pluginName, 'a', function() {
-              var keyCode = +(type === 'keyup' && (event.keyCode || event.which));
+          .on('keydown.' + pluginName, function(event) {
+              var keyCode = +(event.type === 'keyup' && (event.keyCode || event.which));
 
               // Prevent default handler if key press is arrow up or down
               if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
