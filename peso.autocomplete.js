@@ -53,11 +53,11 @@
     defaultMarkup = function(settings) {
 
       return {
-        markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '">',           // Wrapper markup
-        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">',         // Result container markup
-        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">',         // Result item markup
-        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '" href="#">', // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
-        markupHighlight:  '<span class="' + settings.classPrefix + settings.classHighlight + '">'         // Highlight word markup
+        markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '">',                         // Wrapper markup
+        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">',                       // Result container markup
+        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">',                       // Result item markup
+        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '" href="#" tabindex="-1">', // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
+        markupHighlight:  '<span class="' + settings.classPrefix + settings.classHighlight + '">'                       // Highlight word markup
       };
     },
 
@@ -65,7 +65,7 @@
     // 
     // Examples of available mathods:
     // $('selector').autocomplete('close');
-    // $('selector').autocomplete('close');
+    // $('selector').autocomplete('destroy');
     // TODO: Add disable method
     // TODO: Add enable method
     // TODO: Add option method
