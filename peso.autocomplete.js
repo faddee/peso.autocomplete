@@ -53,11 +53,11 @@
     defaultMarkup = function(settings) {
 
       return {
-        markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '">',                         // Wrapper markup
-        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '">',                       // Result container markup
-        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '">',                       // Result item markup
-        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '" href="#" tabindex="-1">', // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
-        markupHighlight:  '<span class="' + settings.classPrefix + settings.classHighlight + '">'                       // Highlight word markup
+        markupWrapper:    '<div class="' + settings.classPrefix + settings.classWrapper + '"></div>',                       // Wrapper markup
+        markupResultList: '<ul class="' + settings.classPrefix + settings.classResultList + '"></ul>',                      // Result container markup
+        markupResultItem: '<li class="' + settings.classPrefix + settings.classResultItem + '"></li>',                      // Result item markup
+        markupResultLink: '<a class="' + settings.classPrefix + settings.classResultLink + '" href="#" tabindex="-1"></a>', // Result link markup, we strongly recommend this to be an <a> tag so you can style it by the :focus pseudo seletor
+        markupHighlight:  '<span class="' + settings.classPrefix + settings.classHighlight + '"></span>'                    // Highlight word markup
       };
     },
 
@@ -132,7 +132,6 @@
       build: function(element) {
         var self = this,
           settings = self.settings,
-          create = settings.create,
           suggestions = self.suggestions = null,
 
           // Store the element for further use
@@ -192,9 +191,10 @@
               length = value.length,
               type = event.type,
               keyCode = +(type === 'keyup' && (event.keyCode || event.which)),
+              previousValue = $input.data('current-value'),
+              hasChanged = value !== previousValue,
               isKey = isKeyEvent(keyCode),
               isFocus = type === 'focus',
-              previousValue = $input.data('current-value'),
               defaultHandler = function(delaying) {
 
                 // Check if the input value meets the requirements of the minLength parameter
@@ -207,7 +207,9 @@
                 }
               };
 
-            $input.data('current-value', value);  
+            if ( hasChanged ) {
+              $input.data('current-value', value);  
+            }
 
             // Check if the keyup is dedicated to controll the autocomplete
             if ( isKey ) {
@@ -215,7 +217,7 @@
               self.keyHandler(keyCode, event.target);
 
             // Call default handler on focus or trigger the change event, calling the default handler if answer is true.
-            } else if ( isFocus || value !== previousValue && self.trigger('change') ) {
+            } else if ( isFocus || hasChanged && self.trigger('change') ) {
 
               // TODO: Bug in IE, when event type is focus the suggestions items shows and then closes a few ms after
               defaultHandler( !isFocus );
