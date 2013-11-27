@@ -1,6 +1,6 @@
 /**
  * $.autocomplete, a.k.a. peso.autocomplete
- * v0.2.6
+ * v0.2.7
  * 
  * Lightweight autocompletion with minimal DOM manipulation as possible, supported by jQuery and Zepto.
  * https://github.com/faddee/peso-autocomplete
@@ -335,13 +335,14 @@
           source = settings.source,
           data;
 
-        // Don't continue if the requirements for the input value isn't met
-        if ( $.type(query) !== 'string' || !self.isLength(query.length) ) {
+        data = {
+          query: query
+        };
+
+        // Don't continue if the requirements for the input value isn't met or the call for the user search callback prevents default
+        if ( $.type(query) !== 'string' || !self.isLength(query.length) || !self.trigger('search', data) ) {
           return self;
         }
-
-        // Call the user search callback
-        self.trigger('search');
 
         // If the query string is and same as the one in the previous fetch, just present the results again
         if ( $.type(latestQuery) === 'string' && $.isArray(self.suggestions) && query === latestQuery ) {
