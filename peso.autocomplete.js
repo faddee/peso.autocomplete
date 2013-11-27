@@ -27,6 +27,7 @@
       minLength:        2,            // Minimum number of characters before the autocomplete triggers
       maxResults:       10,           // Maximum number of results to show, 0 = unlimited
       delay:            500,          // Delay in ms between change and open
+      highlight:        true,         // Wrap the search words in the suggestion labels
 
       // Events
       create:           null,         // User create event, triggers when the build is complete.
@@ -159,7 +160,12 @@
         $input.add($results).on('click.' + pluginName, stopPropagation);
 
         // Determine the source method
-        if ( $.isArray(settings.source) ) {
+        // ...if it should be fetched with an function callback
+        if ( $.isFunction(settings.source) ) {
+          self.method = 'function';
+
+        // ...or if it should use a static array
+        } else if ( $.isArray(settings.source) ) {
           self.method = 'array';
 
         // ...or if it should be fetched with an ajax request
@@ -351,7 +357,7 @@
 
           // Recieve custom callback data as source
           data = {
-            content: source(query)
+            content: source.call(self.input, query)
           };
 
           // Trigger the user respons callback
@@ -481,23 +487,26 @@
             value = isString && item || isObject && $.type(item.value) && item.value,
             label = self.escape( isString && item || isObject && $.type(item.label) && item.label );
 
-          // Heighlight search words in the label
-          $.each(words, function(index, word) {
-            if ( word.length > 0 ) {
-              // Escape the word
-              var wordEscaped = self.escape(word),
+          if ( settings.highlight ) {
+            
+            // Highlight search words in the label
+            $.each(words, function(index, word) {
+              if ( word.length > 0 ) {
+                // Escape the word
+                var wordEscaped = self.escape(word),
 
-                // Regex the escaped string
-                regexWord = new RegExp(wordEscaped, 'ig');
+                  // Regex the escaped string
+                  regexWord = new RegExp(wordEscaped, 'ig');
 
-              // Replace matches with HTML
-              label = label.replace(regexWord, function(match) {
-                var $wordHighlight = $wordTemplate.clone().text(match),
-                  wordHighlight = $wordHighlight[0].outerHTML;
-                return wordHighlight;
-              });
-            }
-          });
+                // Replace matches with HTML
+                label = label.replace(regexWord, function(match) {
+                  var $wordHighlight = $wordTemplate.clone().text(match),
+                    wordHighlight = $wordHighlight[0].outerHTML;
+                  return wordHighlight;
+                });
+              }
+            });
+          }
 
           $link
 
@@ -712,7 +721,7 @@
           $self = $(this);
 
         // Check whether the element is usable
-        if ( $self.is('input') && ($self.is(':not([type])') || $self.is('[type=text]')) ) {
+        if ( $self.is('input') && ($self.is(':not([type=file]):not([type=checkbox]):not([type=radio])')) ) {
 
           // If options is an string, it will call a method
           if ( $.type(options) === 'string' && !!options ) {
