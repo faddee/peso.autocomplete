@@ -1,6 +1,6 @@
 /**
  * $.autocomplete, a.k.a. peso.autocomplete
- * v0.2.7
+ * v0.2.8
  * 
  * Lightweight autocompletion with minimal DOM manipulation as possible, supported by jQuery and Zepto.
  * https://github.com/faddee/peso-autocomplete

@@ -1,7 +1,7 @@
 {
   "name": "peso.autocomplete",
   "main": "peso.autocomplete.js",
-  "version": "0.2.7",
+  "version": "0.2.8",
   "homepage": "https://github.com/faddee/peso.autocomplete",
   "authors": [
     "Fredrik Nicol <fredrik.nicol@capgemini.com>"
