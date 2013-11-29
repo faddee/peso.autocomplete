@@ -190,18 +190,7 @@
               previousValue = $input.data('current-value'),
               hasChanged = value !== previousValue,
               isKey = isKeyEvent(keyCode),
-              isFocus = type === 'focus',
-              defaultHandler = function(delaying) {
-
-                // Check if the input value meets the requirements of the minLength parameter
-                if ( self.isLength(length) ) {
-                  self.open(delaying);
-
-                // If not and the result list is visible, close it
-                } else if ( isVisible($results) ) {
-                  self.close();
-                }
-              };
+              isFocus = type === 'focus';
 
             if ( hasChanged ) {
               $input.data('current-value', value);  
@@ -220,8 +209,14 @@
             // Call default handler on focus or trigger the change event, calling the default handler if answer is true.
             } else if ( isFocus || hasChanged && self.trigger('change') ) {
 
-              // TODO: Bug in IE, when event type is focus the suggestions items shows and then closes a few ms after
-              defaultHandler( !isFocus );
+              // Check if the input value meets the requirements of the minLength parameter
+              if ( self.isLength(length) ) {
+                self.open( !isFocus );
+
+              // If not and the result list is visible, close it
+              } else if ( isVisible($results) ) {
+                self.close();
+              }
             }
           });
 
