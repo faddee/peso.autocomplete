@@ -192,7 +192,7 @@
           })
 
           // Focus and keydown event handlers
-          .on('focus.' + pluginName + ' keydown.' + pluginName, function(event) {
+          .on('keydown.' + pluginName + ' focus.' + pluginName, function(event) {
             var value = $input.val(),
               length = value.length,
               type = event.type,
@@ -543,85 +543,59 @@
           $target = $(target),
           $results = self.$results,
           $input = self.$input,
+          isKeyEnter = +key === keyMap.enter,
+          isKeyEsc = +key === keyMap.esc,
+          isKeyUp = +key === keyMap.up,
+          isKeyDown = +key === keyMap.down,
+          isResultsVisible = isVisible($results),
+          isTargetInput = $target[0] === $input[0],
+          isTargetSuggestion = isResultsVisible && !isTargetInput;
 
-          // Enter key handler
-          enterHandler = function() {
-            var isTargetInput = $target[0] === $input[0];
+        // On enter and the target is a suggestion link
+        if ( isKeyEnter && isTargetSuggestion ) {
 
-            // Check whether the target is a suggestion link
-            if ( !isTargetInput ) {
+          // Trigger click event
+          $target.trigger('click.' + pluginName);
 
-              // Trigger click event
-              $target.trigger('click.' + pluginName);
-            }
-          },
-
-          // Escape key handler
-          escapeHandler = function() {
+        // One escape
+        } else if (isKeyEsc) {
 
             // A simple close
             self.close();
-          },
 
-          // Up and down key handler
-          arrowHandler = function() {
-            var isKeyEsc = +key === keyMap.esc,
-              isKeyUp = +key === keyMap.up,
-              isKeyDown = +key === keyMap.down,
-              isResultsVisible = isVisible($results),
-              isTargetInput = $target[0] === $input[0],
-              isTargetSuggestion = isResultsVisible && !isTargetInput;
+          // On key down or up when input element is focused
+        } else if ( ( isKeyDown || isKeyUp ) && isTargetInput && self.isLength( $input.val().length ) ) {
 
-            // On key down or up when input element is focused
-            if ( isTargetInput && ( isKeyDown || isKeyUp ) && self.isLength( $input.val().length ) ) {
+          // Make sure the autocompletion is open
+          if (!isResultsVisible) {
+            self.open();
+          }
 
-              // Make sure the autocompletion is open
-              if (!isResultsVisible) {
-                self.open();
-              }
+          // Focus the first suggestion link
+          $results
+            .children(isKeyDown && ':first-child' || isKeyUp && ':last-child')
+            .children()
+            .focus();
 
-              // Focus the first suggestion link
-              $results
-                .children(isKeyDown && ':first-child' || isKeyUp && ':last-child')
-                .children()
-                .focus();
+        // On key up or down when the first or last suggestion link is focused
+        } else if ( ( isKeyUp && $target.parent().is(':first-child') || isKeyDown && $target.parent().is(':last-child') ) && isTargetSuggestion ) {
 
-            // On key up or down when the first or last suggestion link is focused
-            } else if ( isTargetSuggestion && ( isKeyUp && $target.parent().is(':first-child') || isKeyDown && $target.parent().is(':last-child') ) ) {
+          // Focus the input element
+          $input.focus();
 
-              // Focus the input element
-              $input.focus();
+        // On key up and down
+        } else if ( ( isKeyDown || isKeyUp ) && isTargetSuggestion ) {
 
-            // On key up and down
-            } else if ( isTargetSuggestion ) {
-              var nextOrPrev = (isKeyDown && 'next') || (isKeyUp && 'prev');
-              $target
-                .parent()
-                [nextOrPrev]()
-                .children()
-                .focus();
-            }
-          };
+          var nextOrPrev = (isKeyDown && 'next') || (isKeyUp && 'prev');
 
-        switch(key) {
-
-          // Enter key handler
-          case keyMap.enter:
-            enterHandler();
-          break;
-
-          // Escape key handler
-          case keyMap.esc:
-            escapeHandler();
-          break;
-
-          // Up and down key handler
-          case keyMap.up:
-          case keyMap.down:
-            arrowHandler();
-          break;
+          $target
+            .parent()
+            [nextOrPrev]()
+            .children()
+            .focus();
 
         }
+
         return self;
       },
 
