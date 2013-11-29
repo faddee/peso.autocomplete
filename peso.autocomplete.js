@@ -181,22 +181,22 @@
           // Save the currect value
           .data('current-value', $input.val())
 
-          .on('keydown.' + pluginName, function(event) {
-              var keyCode = +(event.type === 'keyup' && (event.keyCode || event.which));
+          .on('keyup.' + pluginName, function(event) {
+            var keyCode = +(event.type === 'keyup' && (event.keyCode || event.which));
 
-              // Prevent default handler if key press is arrow up or down
-              if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
-                event.preventDefault();
-              }
+            // Prevent default handler if key press is arrow up or down
+            if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
+              event.preventDefault();
+            }
 
           })
 
-          // Focus and keyup event handlers
-          .on('focus.' + pluginName + ' keyup.' + pluginName, function(event) {
+          // Focus and keydown event handlers
+          .on('focus.' + pluginName + ' keydown.' + pluginName, function(event) {
             var value = $input.val(),
               length = value.length,
               type = event.type,
-              keyCode = +(type === 'keyup' && (event.keyCode || event.which)),
+              keyCode = +(type === 'keydown' && (event.keyCode || event.which)),
               previousValue = $input.data('current-value'),
               hasChanged = value !== previousValue,
               isKey = isKeyEvent(keyCode),
@@ -217,7 +217,7 @@
               $input.data('current-value', value);  
             }
 
-            // Check if the keyup is dedicated to controll the autocomplete
+            // Check if the keydown is dedicated to controll the autocomplete
             if ( isKey ) {
 
               self.keyHandler(keyCode, event.target);
@@ -302,6 +302,7 @@
       // Execute the search
       open: function(delaying) {
         var self = this,
+          delay = self.settings.delay;
 
           // Search executer
           execute = function() {
@@ -314,10 +315,10 @@
           delete self.timeout;
         }
 
-        if ( delaying === true ) {
+        if ( delaying === true && +delay > 0 ) {
 
           // Delay before executing
-          self.timeout = setTimeout(execute, self.settings.delay);
+          self.timeout = setTimeout(execute, delay);
         } else {
           execute();
         }
@@ -571,8 +572,8 @@
               isTargetInput = $target[0] === $input[0],
               isTargetSuggestion = isResultsVisible && !isTargetInput;
 
-            // On key down when input element is focused
-            if ( isTargetInput && isKeyDown && self.isLength( $input.val().length ) ) {
+            // On key down or up when input element is focused
+            if ( isTargetInput && ( isKeyDown || isKeyUp ) && self.isLength( $input.val().length ) ) {
 
               // Make sure the autocompletion is open
               if (!isResultsVisible) {
@@ -581,23 +582,17 @@
 
               // Focus the first suggestion link
               $results
-                .children(':first-child')
+                .children(isKeyDown && ':first-child' || isKeyUp && ':last-child')
                 .children()
                 .focus();
 
-            // On key up when input element is focused or key down when the last suggestion link is focused
-            } else if ( isResultsVisible && isTargetInput && isKeyUp ) {
-
-              // Close the autocompletion
-              self.close();
-
-            // On key up when the first suggestion link is focused
-            } else if ( isTargetSuggestion && isKeyUp && $target.parent().is(':first-child') ) {
+            // On key up or down when the first or last suggestion link is focused
+            } else if ( isTargetSuggestion && ( isKeyUp && $target.parent().is(':first-child') || isKeyDown && $target.parent().is(':last-child') ) ) {
 
               // Focus the input element
               $input.focus();
 
-            // On key up when the first suggestion link is focused
+            // On key up and down
             } else if ( isTargetSuggestion ) {
               var nextOrPrev = (isKeyDown && 'next') || (isKeyUp && 'prev');
               $target
