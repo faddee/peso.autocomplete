@@ -14,6 +14,7 @@
 
     // Define of either Zepto or jQuery, or other $ library for that matter.
     $ = this.$,
+    $document = $(document),
 
     // In case you want to rename the plugin
     pluginName = this.PESO_AUTOCOMPELTE_NAME || 'autocomplete',
@@ -94,11 +95,6 @@
       })[0] || null;
     },
 
-    // Don't bubble events when using the autocompletion
-    stopPropagation = function(event) {
-      event.stopPropagation();
-    },
-
     // Check whether the element is visible or not, insired by Zepto Select-plugin
     isVisible = function(element) {
       var $element = $(element);
@@ -157,7 +153,9 @@
         }
 
         // Make sure click events on the input field or suggestion items doesn't bubble
-        $input.add($results).on('click.' + pluginName, stopPropagation);
+        $input.add($results).on('click.' + pluginName, function(event) {
+          event.stopPropagation();
+        });
 
         // Determine the source method
         // ...if it should be fetched with an function callback
@@ -191,6 +189,11 @@
               hasChanged = value !== previousValue,
               isKey = isKeyEvent(keyCode),
               isFocus = type === 'focus';
+
+            // Make sure all instances are closed on first focus
+            if ( isFocus && !self.isOpen() ) {
+              $document.trigger(pluginName + 'CloseAll');
+            }
 
             if ( hasChanged ) {
               $input.data('current-value', value);  
@@ -673,6 +676,21 @@
 
     };
 
+    // Attach custom event handler to document to close all the autocompletions
+    $document.on(pluginName + 'CloseAll', function() {
+      $.each(instances, function() {
+        var self = this;
+        if ( self.isOpen() ) {
+          self.close();
+        }
+      });
+    });
+
+    // .. trigger it on click event
+    $document.on('click', function() {
+      $(this).trigger(pluginName + 'CloseAll');
+    });
+
     // Add plugin to Zepto, jQuery or whatever
     $.fn[pluginName] = function(options) {
 
@@ -706,15 +724,5 @@
         }
       });
     };
-
-    // Attach a click event handler to close the autocomplete when the user clicks outside it
-    $(document).on('click.' + pluginName, function() {
-      $.each(instances, function() {
-        var self = this;
-        if ( self.isOpen() ) {
-          self.close();
-        }
-      });
-    });
 
 }).call(this);
