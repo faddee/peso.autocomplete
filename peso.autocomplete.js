@@ -181,16 +181,6 @@
           // Save the currect value
           .data('current-value', $input.val())
 
-          .on('keyup.' + pluginName, function(event) {
-            var keyCode = +(event.type === 'keyup' && (event.keyCode || event.which));
-
-            // Prevent default handler if key press is arrow up or down
-            if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
-              event.preventDefault();
-            }
-
-          })
-
           // Focus and keydown event handlers
           .on('keydown.' + pluginName + ' focus.' + pluginName, function(event) {
             var value = $input.val(),
@@ -219,6 +209,11 @@
 
             // Check if the keydown is dedicated to controll the autocomplete
             if ( isKey ) {
+
+              // Prevent default handler if key press is arrow up or down
+              if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
+                event.preventDefault();
+              }
 
               self.keyHandler(keyCode, event.target);
 
