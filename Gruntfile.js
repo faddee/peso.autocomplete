@@ -52,6 +52,8 @@ module.exports = function(grunt) {
 
   grunt.registerTask('test', ['jshint']);
 
-  grunt.registerTask('default', ['jshint', 'compass', 'uglify']);
+  grunt.registerTask('default', ['jshint', 'compass']);
+
+  grunt.registerTask('minify', ['uglify']);
 
 };
