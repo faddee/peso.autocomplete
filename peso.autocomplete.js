@@ -307,7 +307,7 @@
             self.fetch( self.method );
           };
 
-        self.clearTimeout();
+        self.abort();
 
         if ( delaying === true && +delay > 0 ) {
 
@@ -320,13 +320,29 @@
         return this;
       },
 
-      clearTimeout: function() {
+      // Abort search
+      abort: function() {
+        var self = this;
+
+        self.abortRequest();
 
         // Clear timeout
         if ( self.timeout !== undefined ) {
           clearTimeout( self.timeout );
           delete self.timeout;
         }
+      },
+
+      // Abort request
+      abortRequest: function() {
+        var self = this,
+          currentRequest = self.request;
+
+        // Abort ajax request
+        if ( currentRequest !== undefined && $.isFunction(currentRequest.abort) ) {
+          currentRequest.abort();
+        }
+
       },
 
       // Performing the search based on the source when conditions are met
@@ -400,12 +416,9 @@
         } else if ( method === 'ajax' ) {
 
           var fieldName = settings.fieldName,
-            requestData = {},
-            currentRequest = self.request;
+            requestData = {};
 
-          if ( currentRequest !== undefined && $.isFunction(currentRequest.abort) ) {
-            currentRequest.abort();
-          }
+          self.abortRequest();
 
           if ( $.type(fieldName) === 'string' ) {
             requestData[ settings.fieldName ] = query;
@@ -632,7 +645,7 @@
         var self = this,
           $results = self.$results;
 
-        self.clearTimeout();
+        self.abort();
 
         // Empty and hide the results
         $results
