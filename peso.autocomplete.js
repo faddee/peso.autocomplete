@@ -152,11 +152,6 @@
           $input.wrap($wrapper);
         }
 
-        // Make sure click events on the input field or suggestion items doesn't bubble
-        $input.add($results).on('click.' + pluginName, function(event) {
-          event.stopPropagation();
-        });
-
         // Determine the source method
         // ...if it should be fetched with an function callback
         if ( $.isFunction(settings.source) ) {
@@ -171,22 +166,21 @@
           self.method = 'ajax';
         }
 
+        // Save the current value as previous value
+        self.previousValue = $input.val();
+
         // Listen and handling events on the input element
         $input
 
           .attr('autocomplete', 'off')
 
-          // Save the currect value
-          .data('current-value', $input.val())
-
           // Focus and keydown event handlers
-          .on('keydown.' + pluginName + ' focus.' + pluginName, function(event) {
+          .on('keyup.' + pluginName + ' focus.' + pluginName, function(event) {
             var value = $input.val(),
               length = value.length,
               type = event.type,
-              keyCode = +(type === 'keydown' && (event.keyCode || event.which)),
-              previousValue = $input.data('current-value'),
-              hasChanged = value !== previousValue,
+              keyCode = +(type === 'keyup' && (event.keyCode || event.which)),
+              hasChanged = value !== self.previousValue,
               isKey = isKeyEvent(keyCode),
               isFocus = type === 'focus';
 
@@ -196,16 +190,11 @@
             }
 
             if ( hasChanged ) {
-              $input.data('current-value', value);  
+              self.previousValue = value;
             }
 
             // Check if the keydown is dedicated to controll the autocomplete
             if ( isKey ) {
-
-              // Prevent default handler if key press is arrow up or down
-              if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
-                event.preventDefault();
-              }
 
               self.keyHandler(keyCode, event.target);
 
@@ -243,7 +232,7 @@
           })
 
           // Attach keyup event handler on <a> tags
-          .on('keydown.' + pluginName, 'a', function(event) {
+          .on('keyup.' + pluginName, 'a', function(event) {
             var keyCode = event.keyCode || event.which || null;
             if ( isKeyEvent(keyCode) ) {
 
@@ -275,13 +264,29 @@
               // Set the value to the input element
               // TODO: Doable without data-attribute?
               $input.val(value);
-              $input
-                .data('item-label', label)
-                .data('current-value', value);
+              $input.data('item-label', label);
             }
 
             // Close the autocompletion
             self.close();
+          });
+
+        $input.add($results)
+
+          // Make sure click events on the input field or suggestion items doesn't bubble
+          .on('click.' + pluginName, function(event) {
+            event.stopPropagation();
+          })
+
+          // Make sure arrow up and down key doesn't cause the page to scroll
+          .on('keydown.' + pluginName, function(event) {
+              var keyCode = +(event.type === 'keydown' && (event.keyCode || event.which));
+
+              // Prevent default handler if key press is arrow up or down
+              if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
+                event.preventDefault();
+              }
+
           });
 
         // Call the user create callback
@@ -302,11 +307,7 @@
             self.fetch( self.method );
           };
 
-        // Clear timeout
-        if ( self.timeout !== undefined ) {
-          clearTimeout( self.timeout );
-          delete self.timeout;
-        }
+        self.clearTimeout();
 
         if ( delaying === true && +delay > 0 ) {
 
@@ -317,6 +318,15 @@
         }
 
         return this;
+      },
+
+      clearTimeout: function() {
+
+        // Clear timeout
+        if ( self.timeout !== undefined ) {
+          clearTimeout( self.timeout );
+          delete self.timeout;
+        }
       },
 
       // Performing the search based on the source when conditions are met
@@ -482,24 +492,24 @@
             value = isString && item || isObject && $.type(item.value) && item.value,
             label = self.escape( isString && item || isObject && $.type(item.label) && item.label );
 
+          // Highlight search words in the label
           if ( settings.highlight ) {
             
-            // Highlight search words in the label
-            $.each(words, function(index, word) {
-              if ( word.length > 0 ) {
-                // Escape the word
-                var wordEscaped = self.escape(word),
+            var 
 
-                  // Regex the escaped string
-                  regexWord = new RegExp(wordEscaped, 'ig');
+              // Escape the words
+              wordsEscaped = $.map(words, function(word) {
+                return ( word.length > 0 ) ? self.escape(word) : null;
+              }),
 
-                // Replace matches with HTML
-                label = label.replace(regexWord, function(match) {
-                  var $wordHighlight = $wordTemplate.clone().text(match),
-                    wordHighlight = $wordHighlight[0].outerHTML;
-                  return wordHighlight;
-                });
-              }
+              // Regex the escaped string
+              regexWord = new RegExp(wordsEscaped.join('|'), 'ig');
+
+            // Replace matches with HTML
+            label = label.replace(regexWord, function(match) {
+              var $wordHighlight = $wordTemplate.clone().text(match),
+                wordHighlight = $wordHighlight[0].outerHTML;
+              return wordHighlight;
             });
           }
 
@@ -621,6 +631,8 @@
       close: function() {
         var self = this,
           $results = self.$results;
+
+        self.clearTimeout();
 
         // Empty and hide the results
         $results
