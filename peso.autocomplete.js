@@ -184,11 +184,6 @@
               isKey = isKeyEvent(keyCode),
               isFocus = type === 'focus';
 
-            // Make sure all instances are closed on first focus
-            if ( isFocus && !self.isOpen() ) {
-              $document.trigger(pluginName + 'CloseAll');
-            }
-
             if ( hasChanged ) {
               self.previousValue = value;
             }
@@ -273,9 +268,10 @@
 
         $input.add($results)
 
-          // Make sure click events on the input field or suggestion items doesn't bubble
+          // Fake document bubble
           .on('click.' + pluginName, function(event) {
             event.stopPropagation();
+            $document.trigger('click', self);
           })
 
           // Make sure arrow up and down key doesn't cause the page to scroll
@@ -701,19 +697,13 @@
 
     };
 
-    // Attach custom event handler to document to close all the autocompletions
-    $document.on(pluginName + 'CloseAll', function() {
+    // Attach custom event handler to document to close all open the autocompletions
+    $document.on('click.' + pluginName, function(event, ignoreInstance) {
       $.each(instances, function() {
-        var self = this;
-        if ( self.isOpen() ) {
-          self.close();
+        if ( this.isOpen() && ignoreInstance !== this ) {
+          this.close();
         }
       });
-    });
-
-    // .. trigger it on click event
-    $document.on('click', function() {
-      $(this).trigger(pluginName + 'CloseAll');
     });
 
     // Add plugin to Zepto, jQuery or whatever
