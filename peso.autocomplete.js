@@ -85,7 +85,8 @@
       enter: 13,
       esc: 27,
       up: 38,
-      down: 40
+      down: 40,
+      tab: 9
     },
 
     // Get an instance
@@ -172,10 +173,11 @@
         // Listen and handling events on the input element
         $input
 
+          // Disable native autocomplete
           .attr('autocomplete', 'off')
 
           // Focus and keydown event handlers
-          .on('keyup.' + pluginName + ' focus.' + pluginName, function(event) {
+          .on('keyup focus', function(event) {
             var value = $input.val(),
               length = value.length,
               type = event.type,
@@ -215,74 +217,85 @@
           // Add results to the DOM
           .insertAfter($input)
 
-          // Call the user focus callback
-          .on('focus.' + pluginName, 'a', function() {
-            var $item = $(this),
-              data = {
-                target: this,
-                value: $item.data('item-value'),
-                label: $item.text()
-              };
-            self.trigger('focus', data);
-          })
+          .on({
 
-          // Attach keyup event handler on <a> tags
-          .on('keyup.' + pluginName, 'a', function(event) {
-            var keyCode = event.keyCode || event.which || null;
-            if ( isKeyEvent(keyCode) ) {
+            // Call the user focus callback
+            focus: function() {
+              var $item = $(this),
+                data = {
+                  target: this,
+                  value: $item.data('item-value'),
+                  label: $item.text()
+                };
 
-              // Prevent default handler if key press is arrow up or down
-              if ( keyCode === keyMap.up || keyCode === keyMap.down ) {
-                event.preventDefault();
+              self.trigger('focus', data);
+            },
+
+            // Attach keyup event handler on <a> tags
+            keyup: function(event) {
+              var keyCode = event.keyCode || event.which || null;
+              if ( isKeyEvent(keyCode) ) {
+
+                // Prevent default handler if key press is arrow up or down
+                if ( keyCode === keyMap.up || keyCode === keyMap.down ) {
+                  event.preventDefault();
+                }
+
+                self.keyHandler(keyCode, event.target);
+              }
+            },
+
+            // Attach click event handler
+            click: function(event) {
+              event.preventDefault();
+
+              var $item = $(this),
+                value = $item.data('item-value'),
+                label = $item.text(),
+                data = {
+                  target: this,
+                  value: value,
+                  label: label
+                };
+
+              // Call the user select callback
+              if ( self.trigger('select', data) ) {
+
+                // Set the value to the input element
+                // TODO: Doable without data-attribute?
+                $input.val(value);
+                $input.data('item-label', label);
               }
 
-              self.keyHandler(keyCode, event.target);
+              // Close the autocompletion
+              self.close();
             }
-          })
-
-          // Attach click event handler
-          .on('click.' + pluginName, 'a', function(event) {
-            var $item = $(this),
-              value = $item.data('item-value'),
-              label = $item.text(),
-              data = {
-                target: this,
-                value: value,
-                label: label
-              };
-
-            event.preventDefault();
-
-            // Call the user select callback
-            if ( self.trigger('select', data) ) {
-
-              // Set the value to the input element
-              // TODO: Doable without data-attribute?
-              $input.val(value);
-              $input.data('item-label', label);
-            }
-
-            // Close the autocompletion
-            self.close();
-          });
+          }, 'a');
 
         $input.add($results)
 
-          // Fake document bubble
-          .on('click.' + pluginName, function(event) {
-            event.stopPropagation();
-            $document.trigger('click', self);
-          })
+          .on({
 
-          // Make sure arrow up and down key doesn't cause the page to scroll
-          .on('keydown.' + pluginName, function(event) {
-              var keyCode = +(event.type === 'keydown' && (event.keyCode || event.which));
+            // Fake document bubble
+            click: function(event) {
+              event.stopPropagation();
+              $document.trigger('click', self);
+            },
 
-              // Prevent default handler if key press is arrow up or down
-              if ( keyCode > 0 && keyCode === keyMap.up || keyCode === keyMap.down ) {
-                event.preventDefault();
-              }
+            // Make sure arrow up and down key doesn't cause the page to scroll
+            keydown: function(event) {
+                var keyCode = +(event.type === 'keydown' && (event.keyCode || event.which));
 
+                // Prevent default handler if key press is arrow up or down
+                if ( keyCode === keyMap.up || keyCode === keyMap.down ) {
+                  event.preventDefault();
+
+                // Close on tab key
+                } else if ( keyCode === keyMap.tab ) {
+                  self.close();
+                }
+
+            }
           });
 
         // Call the user create callback
@@ -488,6 +501,9 @@
           suggestions = suggestions.slice(0, maxResults);
         }
 
+        // Focus input before empty
+        self.$input.focus();
+
         // Make sure the results are empty
         $results.empty();
 
@@ -567,7 +583,7 @@
         if ( isKeyEnter && isTargetSuggestion ) {
 
           // Trigger click event
-          $target.trigger('click.' + pluginName);
+          $target.trigger('click');
 
         // One escape
         } else if (isKeyEsc) {
