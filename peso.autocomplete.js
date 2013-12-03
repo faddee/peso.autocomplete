@@ -42,6 +42,7 @@
 
       // Markup
       wrap:             true,         // Automatically wrap the input element, set to false you need to wrap it manually with CSS: position: relative;
+      appendTo:         null,
       classPrefix:      pluginName,   // Class name prefix
       classWrapper:     '',           // The class name of the wrapper for the input element
       classInput:       '__input',    // The class name for the input element, set to null if you wan't to do it manually
@@ -132,6 +133,8 @@
           settings = self.settings,
           suggestions = self.suggestions = null,
 
+          $context = $(settings.appendTo),
+
           // Store the element for further use
           input = self.input = element,
           $input = self.$input = $(element),
@@ -140,17 +143,26 @@
           original = self.original = $input.clone()[0],
 
           // Create the result list object and store it
-          $results = self.$results = $(settings.markupResultList);
+          $results = self.$results = $(settings.markupResultList).hide();
 
         // Add class to the input element
         if ( $.type(settings.classInput) === 'string' ) {
           $input.addClass(settings.classPrefix + settings.classInput);
         }
 
-        // Wraps the input element
-        if ( settings.wrap === true ) {
-          var $wrapper = self.$wrapper = $(settings.markupWrapper);
-          $input.wrap($wrapper);
+        // Add results to specified context
+        if ( $context.length > 0 ) {
+          $results.appendTo( $context.get(0) );
+
+        // Wrap the input element
+        } else {
+          if ( settings.wrap === true ) {
+            var $wrapper = self.$wrapper = $(settings.markupWrapper);
+            $input.wrap($wrapper);
+          }
+
+          // Add results to DOM
+          $results.insertAfter($input)
         }
 
         // Determine the source method
@@ -210,12 +222,6 @@
           });
 
         $results
-
-          // Make sure its hidden
-          .hide()
-
-          // Add results to the DOM
-          .insertAfter($input)
 
           .on({
 
