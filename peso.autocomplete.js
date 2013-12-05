@@ -14,6 +14,7 @@
 
     // Define of either Zepto or jQuery, or other $ library for that matter.
     $ = this.$,
+    document = this.document,
     $document = $(document),
 
     // In case you want to rename the plugin
@@ -162,7 +163,7 @@
           }
 
           // Add results to DOM
-          $results.insertAfter($input)
+          $results.insertAfter($input);
         }
 
         // Determine the source method
@@ -315,7 +316,7 @@
       // Execute the search
       open: function(delaying) {
         var self = this,
-          delay = self.settings.delay;
+          delay = +self.settings.delay;
 
           // Search executer
           execute = function() {
@@ -324,7 +325,7 @@
 
         self.abort();
 
-        if ( delaying === true && +delay > 0 ) {
+        if ( delaying === true && delay > 0 ) {
 
           // Delay before executing
           self.timeout = setTimeout(execute, delay);
@@ -484,7 +485,7 @@
           settings = self.settings,
           maxResults = +settings.maxResults,
           suggestions = self.suggestions,
-          words = self.$input.val().split(/\s/),
+          words = self.$input.val().split(/\s+/),
           $results = self.$results,
           $itemTemplate = $(settings.markupResultItem),
           $linkTemplate = $(settings.markupResultLink),
@@ -508,7 +509,9 @@
         }
 
         // Focus input before empty
-        self.$input.focus();
+        if ( document.activeElement !== self.input ) {
+          self.$input.focus();
+        }
 
         // Make sure the results are empty
         $results.empty();
